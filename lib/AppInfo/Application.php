@@ -14,6 +14,7 @@ use OCA\EinkaufCheck\Listener\GroupDeletedListener;
 use OCA\EinkaufCheck\Listener\UserDeletedListener;
 use OCA\EinkaufCheck\Middleware\AppAccessMiddleware;
 use OCA\EinkaufCheck\Notification\Notifier;
+use OCA\EinkaufCheck\Repair\EnsureEinkaufCheckSchema;
 use OCA\EinkaufCheck\Service\OfferFetchService;
 use OCA\EinkaufCheck\Service\PriceHistoryService;
 use OCP\AppFramework\App;
@@ -23,6 +24,7 @@ use OCP\AppFramework\Bootstrap\IRegistrationContext;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\Lock\ILockingProvider;
 use OCP\Group\Events\GroupDeletedEvent;
 use OCP\Security\CSP\AddContentSecurityPolicyEvent;
@@ -42,6 +44,12 @@ class Application extends App implements IBootstrap {
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedListener::class);
 		$context->registerEventListener(GroupDeletedEvent::class, GroupDeletedListener::class);
 		$context->registerEventListener(AddContentSecurityPolicyEvent::class, CSPListener::class);
+
+		$context->registerService(EnsureEinkaufCheckSchema::class, function ($c): EnsureEinkaufCheckSchema {
+			return new EnsureEinkaufCheckSchema(
+				$c->get(IDBConnection::class),
+			);
+		});
 
 		$context->registerService(OfferFetchService::class, function ($c): OfferFetchService {
 			$appData = null;
