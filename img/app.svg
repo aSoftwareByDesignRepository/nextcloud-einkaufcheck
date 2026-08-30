@@ -1,7 +1,16 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <rect width="64" height="64" rx="12" fill="#0d6e56"/>
-  <path d="M16 22h28l-3 18H22l-6-18z" stroke="#f7fafb" stroke-width="3" stroke-linejoin="round"/>
-  <circle cx="25" cy="46" r="3.5" fill="#f7fafb"/>
-  <circle cx="39" cy="46" r="3.5" fill="#f7fafb"/>
-  <path d="M20 28h18M20 33h14" stroke="#f7fafb" stroke-width="2" stroke-linecap="round"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SPDX-FileCopyrightText: 2026 Alexander Maeule <info@software-by-design.de>
+  SPDX-License-Identifier: AGPL-3.0-or-later
+
+  EinkaufCheck white glyph for Nextcloud header / app menu / navigation entry.
+  Motif: shopping bag (weekly offers + list). White strokes only so
+  Nextcloud background-image-invert-if-bright keeps the glyph visible.
+  XML comments must not contain consecutive hyphen pairs (breaks strict SVG parsers).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+	<path d="M6 8h12l-1.2 12.5a1.5 1.5 0 0 1-1.5 1.5H8.7a1.5 1.5 0 0 1-1.5-1.5L6 8z"/>
+	<path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
+	<path d="M9 11v4"/>
+	<path d="M15 11v4"/>
 </svg>

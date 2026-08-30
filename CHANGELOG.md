@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.5] — 2026-08-30
+
+### UI
+- Replace filled green tile icons with NC-standard monochrome shopping-bag glyphs (`app.svg` white / `app-dark.svg` black), matching SnackCheck / HomeCheck / HealthCheck
+
 ## [1.5.4] — 2026-08-30
 
 ### Security / reliability
