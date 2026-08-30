@@ -32,7 +32,7 @@ Holt **Eigenmarken** und **lose Frische** (Obst/Gemüse) aus den JSON-Feeds von 
 - Nextcloud 32–34 · PHP 8.2–8.5 · Python 3.11+ auf dem Server (`python3`)
 - MySQL oder PostgreSQL
 	]]></description>
-	<version>1.5.5</version>
+	<version>1.5.6</version>
 	<licence>AGPL-3.0-or-later</licence>
 	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de/">Software by Design GbR</author>
 	<namespace>EinkaufCheck</namespace>
@@ -49,7 +49,7 @@ Holt **Eigenmarken** und **lose Frische** (Obst/Gemüse) aus den JSON-Feeds von 
 		<navigation>
 			<name>EinkaufCheck</name>
 			<route>einkaufcheck.page.index</route>
-			<icon>app.svg</icon>
+			<icon>app-menu.svg</icon>
 			<order>55</order>
 			<type>link</type>
 		</navigation>

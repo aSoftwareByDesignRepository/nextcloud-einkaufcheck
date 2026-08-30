@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.5.6] — 2026-08-30
+
+### UI
+- Cache-bust app menu icon URL (`app-menu.svg`) so browsers that cached the old green tile under `app.svg` (multi-month Cache-Control) pick up the shopping-bag glyph
+
 ## [1.5.5] — 2026-08-30
 
 ### UI

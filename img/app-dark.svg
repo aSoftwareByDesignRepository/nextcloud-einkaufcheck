@@ -2,6 +2,7 @@
 <!--
   SPDX-FileCopyrightText: 2026 Alexander Maeule <info@software-by-design.de>
   SPDX-License-Identifier: AGPL-3.0-or-later
+  Cache-bust stamp: 1.5.5-icon2
 
   EinkaufCheck dark or uncoloured glyph for dashboard widgets, notifications, and unified search.
   Per OCP Dashboard IIconWidget, icons must be black or uncoloured; clients apply
