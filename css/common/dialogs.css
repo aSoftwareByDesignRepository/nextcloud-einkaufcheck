@@ -1,0 +1,673 @@
+/* Dialog/toast/form surfaces adapted from arbeitszeitcheck components.css */
+/* ===== MODAL COMPONENTS ===== */
+
+/* Modal Backdrop */
+.modal-backdrop {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-start: var(--ekc-overlay-top, var(--header-height, 50px));
+  inset-block-end: 0;
+  min-height: var(--ekc-overlay-height, calc(100dvh - var(--header-height, 50px)));
+  background-color: color-mix(in srgb, var(--color-main-text) 50%, transparent);
+  z-index: var(--z-modal-backdrop);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  /* When the modal is taller than the viewport, keep it reachable (flex + overflow). */
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@supports (align-items: safe center) {
+  .modal-backdrop {
+    align-items: safe center;
+  }
+}
+
+/* Keep the panel from shrinking when the backdrop scrolls (flex + overflow). */
+.modal-backdrop > .modal {
+  flex-shrink: 0;
+}
+
+/* Modal */
+.modal,
+.ekc-dialog {
+  background-color: var(--einkaufcheck-color-modal-background, var(--ekc-bg-card, var(--color-main-background)));
+  color: var(--ekc-text, var(--color-main-text));
+  border: 1px solid var(--ekc-border, var(--color-border));
+  border-radius: var(--ekc-radius-lg, 16px);
+  box-shadow: var(--ekc-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));
+  max-width: min(36rem, 90vw);
+  max-height: min(90dvh, calc(100dvh - var(--header-height, 50px) - 2rem));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: var(--z-modal);
+}
+
+/* Modal Variants */
+.modal--sm {
+  width: min(400px, 100%);
+}
+
+.modal--md {
+  width: min(600px, 100%);
+}
+
+.modal--lg {
+  width: min(800px, 100%);
+}
+
+.modal--xl {
+  width: min(1000px, 100%);
+}
+
+.modal--fullscreen {
+  width: 100vw;
+  width: 100%;
+  height: var(--ekc-overlay-height, calc(100dvh - var(--header-height, 50px)));
+  max-width: none;
+  max-height: none;
+  border-radius: 0;
+}
+
+/* Modal width — mobile-first near-full viewport; padding restored after chrome defs. */
+.modal {
+  max-width: 95vw;
+  max-height: 95vh;
+  max-height: 95dvh;
+  margin: var(--space-2, 0.5rem);
+}
+
+.modal--sm,
+.modal--md,
+.modal--lg,
+.modal--xl {
+  width: 100%;
+  max-width: 95vw;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ekc-space-3, var(--space-3, 0.75rem));
+  padding: var(--ekc-space-4, var(--space-4));
+  border-bottom: 1px solid var(--ekc-border, var(--einkaufcheck-color-modal-border));
+  background-color: transparent;
+}
+
+.confirm-dialog .modal-header,
+.ekc-dialog.confirm-dialog .modal-header {
+  background-color: transparent;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.modal-title {
+  font-size: var(--einkaufcheck-font-size-lg);
+  font-weight: var(--einkaufcheck-font-weight-semibold);
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: var(--einkaufcheck-font-size-xl, var(--ekc-fs-xl));
+  color: var(--einkaufcheck-color-text-muted, var(--color-text-maxcontrast));
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-base, 6px);
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+  width: var(--ekc-touch, 44px);
+  height: var(--ekc-touch, 44px);
+  min-width: var(--ekc-touch, 44px);
+  min-height: var(--ekc-touch, 44px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+  background-color: var(--einkaufcheck-color-background-tertiary);
+}
+
+/* Modal Body */
+.modal-body {
+  padding: var(--space-4);
+  color: var(--einkaufcheck-color-text-maxcontrast, var(--color-text-maxcontrast, var(--einkaufcheck-color-text, var(--color-main-text))));
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-4);
+  border-top: 1px solid var(--einkaufcheck-color-modal-border);
+  background-color: var(--einkaufcheck-color-modal-footer-background);
+}
+
+.modal-footer--left {
+  justify-content: flex-start;
+}
+
+.modal-footer--single {
+  justify-content: center;
+}
+
+.modal-footer--center {
+  justify-content: center;
+}
+
+.modal-footer--space-between {
+  justify-content: space-between;
+}
+
+/* Mobile-first modal padding/title (after chrome defs so cascade wins). */
+.modal-header,
+.modal-body,
+.modal-footer {
+  padding: var(--space-3, 0.75rem);
+}
+
+.modal-title {
+  font-size: var(--einkaufcheck-font-size-base, 1rem);
+}
+
+/* 769px = NC tablet+: restore desktop modal width/padding (prior unscoped defaults). */
+@media (min-width: 769px) {
+  .modal,
+  .ekc-dialog {
+    max-width: min(36rem, 90vw);
+    max-height: min(90dvh, calc(100dvh - var(--header-height, 50px) - 2rem));
+    margin: 0;
+  }
+
+  .modal--sm { width: min(400px, 100%); max-width: min(36rem, 90vw); }
+  .modal--md { width: min(600px, 100%); max-width: min(36rem, 90vw); }
+  .modal--lg { width: min(800px, 100%); max-width: min(36rem, 90vw); }
+  .modal--xl { width: min(1000px, 100%); max-width: min(36rem, 90vw); }
+
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding: var(--space-4, 1rem);
+  }
+
+  .modal-title {
+    font-size: var(--einkaufcheck-font-size-lg, 1.125rem);
+  }
+}
+
+
+/* ===== ALERT COMPONENTS (see common/legacy-alert.css) ===== */
+
+.alert__link {
+	display: inline-block;
+	margin-top: var(--space-2, 0.5rem);
+	font-weight: var(--einkaufcheck-font-weight-semibold, 600);
+	text-decoration: underline;
+	text-underline-offset: 0.15em;
+	color: var(--color-main-text);
+}
+
+.alert__link:focus-visible {
+	outline: 2px solid var(--color-primary-element, var(--einkaufcheck-color-primary));
+	outline-offset: 2px;
+}
+
+.alert--dismissible {
+	padding-right: var(--space-8);
+	position: relative;
+}
+
+.alert-close {
+	position: absolute;
+	top: var(--space-3, 0.75rem);
+	right: var(--space-3, 0.75rem);
+	background: none;
+	border: none;
+	font-size: var(--einkaufcheck-font-size-lg);
+	color: var(--color-main-text);
+	cursor: pointer;
+	padding: var(--space-1);
+	border-radius: var(--radius-base, 6px);
+	opacity: 0.9;
+	transition: opacity 0.15s ease-in-out;
+}
+
+.alert-close:hover,
+.alert-close:focus-visible {
+	opacity: 1;
+}
+
+/* Inline notices + toasts: common/notification-surfaces.css (icon wells: common/icons.css) */
+
+
+/* ===== FORM COMPONENTS ===== */
+
+/* Form Container */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form--horizontal {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.form--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+/* Form Group */
+/* Combobox listbox — not a document list (avoid global ul bullets) */
+#app-content-wrapper .user-picker__list {
+	list-style: none;
+	padding-left: 0;
+	margin-bottom: 0;
+}
+
+#app-content-wrapper .user-picker__list .user-picker__item {
+	margin-bottom: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-6, 1.5rem);
+  position: relative;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group--horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+/* Form Label */
+.form-label,
+.form-group label {
+  font-family: var(--einkaufcheck-font-family-sans, inherit);
+  font-size: var(--einkaufcheck-font-size-sm);
+  font-weight: var(--einkaufcheck-font-weight-medium);
+  color: var(--einkaufcheck-color-form-label, var(--color-main-text));
+  line-height: var(--einkaufcheck-line-height-normal, 1.45);
+  display: block;
+  margin-bottom: var(--space-2, 0.5rem);
+  margin-top: 0;
+}
+
+.form-label--required::after,
+.form-group label.required::after {
+  content: ' *';
+  color: var(--einkaufcheck-color-form-required, var(--color-error));
+}
+
+.form-required {
+  color: var(--einkaufcheck-color-error);
+  margin-left: var(--space-1);
+  font-weight: var(--einkaufcheck-font-weight-semibold);
+}
+
+/* Legend for required markers — keep inside form header/meta rows */
+#app-content.ekc-app .form-required-note {
+  margin: 0;
+  font-size: var(--ekc-fs-sm, 0.875rem);
+  line-height: var(--ekc-line-base, 1.45);
+  color: var(--ekc-muted, var(--color-text-maxcontrast));
+}
+
+/* Form Input */
+.form-input,
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group input[type="number"],
+.form-group input[type="date"],
+.form-group input[type="time"],
+.form-group input[type="datetime-local"],
+.form-group input[type="password"],
+.form-group input[type="url"],
+.form-group input[type="tel"] {
+  display: block;
+  width: 100%;
+  min-height: 44px; /* Minimum touch target size for accessibility (WCAG 2.5.5) */
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  font-family: var(--einkaufcheck-font-family-sans, inherit);
+  font-size: var(--einkaufcheck-font-size-base, 1rem);
+  line-height: var(--einkaufcheck-line-height-normal, 1.45);
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+  background-color: var(--einkaufcheck-color-form-background, var(--color-main-background));
+  border: 1px solid var(--einkaufcheck-color-form-border, var(--color-border));
+  border-radius: var(--radius-base, 6px);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.form-input:focus-visible,
+.form-group input:focus-visible,
+.form-group select:focus-visible,
+.form-group textarea:focus-visible {
+  border-color: var(--einkaufcheck-color-form-border-focus, var(--color-primary-element));
+  box-shadow: 0 0 0 3px var(--einkaufcheck-color-primary-light, color-mix(in srgb, var(--color-primary-element) 28%, transparent));
+  outline: none;
+}
+
+.form-input:disabled,
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+  background-color: var(--einkaufcheck-color-background-secondary, var(--color-background-dark));
+  color: var(--einkaufcheck-color-text-muted, var(--color-text-maxcontrast));
+  cursor: not-allowed;
+}
+
+.form-input--error,
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+  border-color: var(--einkaufcheck-color-form-border-error, var(--color-error));
+}
+
+.form-input--error:focus,
+.form-group input.error:focus,
+.form-group select.error:focus,
+.form-group textarea.error:focus {
+  border-color: var(--einkaufcheck-color-form-border-error, var(--color-error));
+  box-shadow: 0 0 0 3px var(--einkaufcheck-color-error-light, color-mix(in srgb, var(--color-error) 28%, transparent));
+}
+
+.form-input--success {
+  border-color: var(--einkaufcheck-color-form-border-success, var(--color-success));
+}
+
+.form-input--success:focus {
+  border-color: var(--einkaufcheck-color-form-border-success, var(--color-success));
+  box-shadow: 0 0 0 3px var(--einkaufcheck-color-success-light, color-mix(in srgb, var(--color-success) 28%, transparent));
+}
+
+.form-input--warning {
+  border-color: var(--einkaufcheck-color-border-warning, var(--color-warning));
+}
+
+.form-input--warning:focus {
+  border-color: var(--einkaufcheck-color-border-warning, var(--color-warning));
+  box-shadow: 0 0 0 3px var(--einkaufcheck-color-warning-light, color-mix(in srgb, var(--color-warning) 28%, transparent));
+}
+
+/* Placeholder — theme-aware (WCAG contrast in light/dark) */
+.form-input::placeholder,
+.form-group input::placeholder,
+.form-textarea::placeholder,
+.form-group textarea::placeholder {
+  color: var(--color-text-maxcontrast);
+}
+.form-select:invalid,
+.form-group select:invalid {
+  color: var(--color-text-maxcontrast);
+}
+
+/* Form Textarea */
+.form-textarea,
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-textarea--large {
+  min-height: 150px;
+  width: 100%;
+}
+
+/* Form Select — uses Nextcloud theme icon for arrow (light/dark compatible)
+ * Explicit padding ensures vertical centering; overrides Nextcloud core select styles */
+.form-select,
+.form-group select {
+  background-image: var(--icon-triangle-s-dark, url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b6b6b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e"));
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25em 1.25em;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  /* 44px height, symmetric vertical padding for clean text centering */
+  height: 44px;
+  padding: 0.625rem 2.5rem 0.625rem 1rem;
+  line-height: 1.5;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.form-input.form-select {
+  padding: 0.625rem 2.5rem 0.625rem 1rem;
+  background-position: right 0.75rem center;
+  background-size: 1.25em 1.25em;
+  height: 44px;
+  line-height: 1.5;
+}
+
+.form-select::-ms-expand {
+  display: none;
+}
+
+.form-select option {
+  padding: 0.5rem;
+  line-height: 1.4;
+  background-color: var(--einkaufcheck-color-background, var(--color-main-background));
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+}
+
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .form-select option,
+html[data-theme="dark"] .form-input.form-select,
+html[data-theme="dark"] .form-input.form-select option,
+body[data-theme-dark] .form-select,
+body[data-theme-dark] .form-select option,
+body[data-theme-dark-highcontrast] .form-select,
+body[data-theme-dark-highcontrast] .form-select option,
+body[data-theme-dark] .form-input.form-select,
+body[data-theme-dark] .form-input.form-select option,
+body[data-theme-dark-highcontrast] .form-input.form-select,
+body[data-theme-dark-highcontrast] .form-input.form-select option {
+  background-color: var(--einkaufcheck-color-background, var(--color-main-background));
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+}
+
+/* Form Checkbox and Radio */
+.form-checkbox,
+.form-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  cursor: pointer;
+  user-select: none;
+}
+
+.form-checkbox input[type="checkbox"],
+.form-radio input[type="radio"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  min-height: 1.25rem;
+  max-width: 1.25rem;
+  max-height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  cursor: pointer;
+  background-color: var(--einkaufcheck-color-form-background, var(--color-main-background));
+  border: 1px solid var(--einkaufcheck-color-form-border, var(--color-border));
+  border-radius: 3px;
+  box-sizing: border-box;
+  accent-color: var(--color-primary-element);
+  color-scheme: inherit;
+  appearance: auto;
+  -webkit-appearance: auto;
+}
+.form-radio input[type="radio"] {
+  border-radius: 50%;
+}
+
+/* Ensure checkbox/radio labels are vertically centered with the control */
+.form-checkbox .form-label,
+.form-radio .form-label,
+.form-checkbox label,
+.form-radio label {
+  margin-bottom: 0;
+  line-height: 1.3;
+}
+
+.form-checkbox input[type="checkbox"]:focus,
+.form-radio input[type="radio"]:focus {
+  outline: 2px solid var(--einkaufcheck-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Form Input Group (for inputs with buttons) */
+.form-in
+/* ===== EMPTY STATE COMPONENTS ===== */
+
+.empty-state {
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+  color: var(--einkaufcheck-color-text-tertiary);
+}
+
+.empty-state__icon {
+  width: 4rem;
+  height: 4rem;
+  background-color: var(--einkaufcheck-color-primary-light, color-mix(in srgb, var(--color-primary-element) 28%, transparent));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto var(--space-6) auto;
+  font-size: 2rem;
+  color: var(--einkaufcheck-color-primary-element);
+}
+
+.empty-state__title {
+  font-size: var(--einkaufcheck-font-size-xl);
+  font-weight: var(--einkaufcheck-font-weight-semibold);
+  margin: 0 0 var(--space-2, 0.5rem) 0;
+  color: var(--einkaufcheck-color-text, var(--color-main-text));
+}
+
+.empty-state__description {
+  font-size: var(--einkaufcheck-font-size-base, 1rem);
+  margin: 0 0 var(--space-6) 0;
+  line-height: var(--einkaufcheck-line-height-relaxed);
+  color: var(--einkaufcheck-color-text-secondary);
+  max-width: 32rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-state .btn {
+  margin-top: var(--space-4);
+}
+
+/* Responsive components — mobile-first stacked chrome. */
+.form--horizontal,
+.form--inline,
+.form-group--horizontal {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.card-actions {
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.modal-footer {
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.toast-container {
+  left: calc(var(--space-4) + env(safe-area-inset-left, 0px));
+  right: calc(var(--space-4) + env(safe-area-inset-right, 0px));
+  max-width: none;
+}
+
+.header-content {
+  flex-direction: column;
+  padding: 0 var(--space-4);
+}
+
+.empty-state {
+  padding: var(--space-8) var(--space-4);
+}
+
+/* 769px = NC tablet+: restore horizontal forms / footer row (prior desktop). */
+@media (min-width: 769px) {
+  .form--horizontal,
+  .form--inline {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+
+  .form-group--horizontal {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .card-actions {
+    flex-direction: row;
+  }
+
+  .modal-footer {
+    flex-direction: row;
+  }
+
+  .toast-container {
+    left: auto;
+    right: calc(var(--space-4) + env(safe-area-inset-right, 0px));
+    max-width: min(24rem, calc(100vw - 2rem));
+  }
+
+  .header-content {
+    flex-direction: row;
+    padding: 0;
+  }
+
+  .empty-state {
+    padding: var(--space-8) var(--space-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn,
+  .card,
+  .modal,
+  .toast,
+  .loading-spinner,
+  .loading {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+

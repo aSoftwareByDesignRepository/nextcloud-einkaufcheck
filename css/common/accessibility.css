@@ -1,0 +1,107 @@
+/**
+ * Accessibility — scoped to EinkaufCheck (WCAG 2.1 AA).
+ * Focus rings, reduced motion, high contrast, forced-colors.
+ * Never restyle Nextcloud core chrome outside #content.app-einkaufcheck.
+ */
+
+#content.app-einkaufcheck a:focus-visible,
+#content.app-einkaufcheck button:focus-visible,
+#content.app-einkaufcheck input:focus-visible,
+#content.app-einkaufcheck select:focus-visible,
+#content.app-einkaufcheck textarea:focus-visible,
+#content.app-einkaufcheck [tabindex="0"]:focus-visible,
+#content.app-einkaufcheck .ekc-btn:focus-visible,
+#content.app-einkaufcheck .button:focus-visible,
+#content.app-einkaufcheck .form-input:focus-visible,
+#content.app-einkaufcheck .form-select:focus-visible,
+#content.app-einkaufcheck .form-textarea:focus-visible,
+#content.app-einkaufcheck .ekc-nav__link:focus-visible,
+#content.app-einkaufcheck .ekc-settings-nav__link:focus-visible,
+#content.app-einkaufcheck .ekc-breadcrumb__link:focus-visible,
+.ekc-dialog a:focus-visible,
+.ekc-dialog button:focus-visible,
+.ekc-dialog input:focus-visible,
+.ekc-dialog select:focus-visible,
+.ekc-dialog textarea:focus-visible,
+.ekc-dialog .ekc-btn:focus-visible,
+.modal-backdrop.ekc-dialog-overlay a:focus-visible,
+.modal-backdrop.ekc-dialog-overlay button:focus-visible,
+.modal-backdrop.ekc-dialog-overlay input:focus-visible,
+.modal-backdrop.ekc-dialog-overlay select:focus-visible,
+.modal-backdrop.ekc-dialog-overlay textarea:focus-visible {
+	outline: var(--ekc-focus, 3px) solid var(--color-primary-element);
+	outline-offset: 2px;
+}
+
+/* Mouse click must not leave a permanent ring (WCAG 2.4.7 / DS principle 5). */
+#content.app-einkaufcheck a:focus:not(:focus-visible),
+#content.app-einkaufcheck button:focus:not(:focus-visible),
+#content.app-einkaufcheck input:focus:not(:focus-visible),
+#content.app-einkaufcheck select:focus:not(:focus-visible),
+#content.app-einkaufcheck textarea:focus:not(:focus-visible),
+.ekc-dialog a:focus:not(:focus-visible),
+.ekc-dialog button:focus:not(:focus-visible),
+.ekc-dialog input:focus:not(:focus-visible),
+.ekc-dialog select:focus:not(:focus-visible),
+.ekc-dialog textarea:focus:not(:focus-visible) {
+	outline: none;
+}
+
+@supports not selector(:focus-visible) {
+	#content.app-einkaufcheck a:focus,
+	#content.app-einkaufcheck button:focus,
+	#content.app-einkaufcheck input:focus,
+	#content.app-einkaufcheck select:focus,
+	#content.app-einkaufcheck textarea:focus,
+	#content.app-einkaufcheck [tabindex="0"]:focus {
+		outline: var(--ekc-focus, 3px) solid var(--color-primary-element);
+		outline-offset: 2px;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#content.app-einkaufcheck *,
+	#content.app-einkaufcheck *::before,
+	#content.app-einkaufcheck *::after,
+	.ekc-dialog,
+	.ekc-dialog *,
+	.modal-backdrop.ekc-dialog-overlay,
+	.modal-backdrop.ekc-dialog-overlay * {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+@media (prefers-contrast: more) {
+	#content.app-einkaufcheck .ekc-btn,
+	#content.app-einkaufcheck .button,
+	.ekc-dialog .ekc-btn {
+		border-width: 2px;
+	}
+
+	#content.app-einkaufcheck a:focus-visible,
+	#content.app-einkaufcheck button:focus-visible,
+	.ekc-dialog a:focus-visible,
+	.ekc-dialog button:focus-visible {
+		outline-width: 3px;
+	}
+}
+
+@media (forced-colors: active) {
+	#content.app-einkaufcheck .ekc-btn,
+	#content.app-einkaufcheck .button,
+	#content.app-einkaufcheck .ekc-card,
+	#content.app-einkaufcheck .ekc-empty,
+	.ekc-dialog {
+		forced-color-adjust: auto;
+		border: 1px solid CanvasText;
+	}
+
+	#content.app-einkaufcheck a:focus-visible,
+	#content.app-einkaufcheck button:focus-visible,
+	.ekc-dialog button:focus-visible {
+		outline: 3px solid Highlight;
+	}
+}

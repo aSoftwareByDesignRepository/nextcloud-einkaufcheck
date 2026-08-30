@@ -1,0 +1,15 @@
+node_modules/
+vendor/
+.phpunit.result.cache
+test-results/
+playwright-report/
+blob-report/
+coverage/
+.env
+.env.local
+e2e/.env
+.auth/
+build/
+__pycache__/
+scripts/_locale_*.py
+*.pyc

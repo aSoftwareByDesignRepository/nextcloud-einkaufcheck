@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<!--
+  - SPDX-FileCopyrightText: 2026 Alexander Mäule <info@software-by-design.de>
+  - SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+	<id>einkaufcheck</id>
+	<name>EinkaufCheck</name>
+	<summary>Weekly private-label offers, produce, shopping list, and staple price alerts</summary>
+	<summary lang="de">Wochenangebote Eigenmarken &amp; Frische, Einkaufszettel und Vorrats-Alerts</summary>
+	<description><![CDATA[
+# EinkaufCheck
+
+Pulls **Eigenmarken** and **loose produce** from ALDI Nord and Lidl JSON feeds for a configurable PLZ. Build a shopping list, export CSV/text, or open WhatsApp with the list. Keep a **staple watchlist** with optional price caps — Nextcloud notifies you when matching offers appear. **Price trends** compare this week with earlier weeks so you can see when a product is cheaper than usual. **Product pictures** are off until you switch them on — then the browser loads allowlisted store CDNs (no Nextcloud image proxy).
+
+**REWE, Kaufland, Netto, Penny** need authenticated retailer APIs (mTLS / app login) and are listed as pending — not scraped from brittle HTML.
+
+## Requirements
+
+- Nextcloud 32–34 · PHP 8.2–8.5 · Python 3.11+ on the server (`python3`)
+- MySQL or PostgreSQL
+	]]></description>
+	<description lang="de"><![CDATA[
+# EinkaufCheck
+
+Holt **Eigenmarken** und **lose Frische** (Obst/Gemüse) aus den JSON-Feeds von ALDI Nord und Lidl für eine PLZ. Einkaufszettel bauen, als CSV/Text exportieren oder per WhatsApp teilen. **Vorratsliste** mit optionalen Preisobergrenzen — Benachrichtigung, wenn passende Angebote da sind. **Preisverläufe** vergleichen diese Woche mit früheren Wochen — wann ist etwas günstiger als sonst. **Produktbilder** bleiben aus, bis du sie einschaltest — dann lädt der Browser nur die erlaubten Händler-CDNs (kein Bild-Proxy über Nextcloud).
+
+**REWE, Kaufland, Netto, Penny** brauchen authentifizierte Händler-APIs und sind vorbereitet, aber noch nicht angebunden — kein fragiles HTML-Scraping.
+
+## Voraussetzungen
+
+- Nextcloud 32–34 · PHP 8.2–8.5 · Python 3.11+ auf dem Server (`python3`)
+- MySQL oder PostgreSQL
+	]]></description>
+	<version>1.5.4</version>
+	<licence>AGPL-3.0-or-later</licence>
+	<author mail="info@software-by-design.de" homepage="https://nextcloud.software-by-design.de/">Software by Design GbR</author>
+	<namespace>EinkaufCheck</namespace>
+	<category>organization</category>
+	<category>tools</category>
+	<website>https://nextcloud.software-by-design.de/</website>
+	<dependencies>
+		<nextcloud min-version="32" max-version="34"/>
+		<php min-version="8.2" max-version="8.5"/>
+		<database>pgsql</database>
+		<database>mysql</database>
+	</dependencies>
+	<navigations>
+		<navigation>
+			<name>EinkaufCheck</name>
+			<route>einkaufcheck.page.index</route>
+			<icon>app.svg</icon>
+			<order>55</order>
+			<type>link</type>
+		</navigation>
+	</navigations>
+	<background-jobs>
+		<job>OCA\EinkaufCheck\Cron\WatchAlertJob</job>
+	</background-jobs>
+	<repair-steps>
+		<install>
+			<step>OCA\EinkaufCheck\Repair\EnsureEinkaufCheckSchema</step>
+		</install>
+		<post-migration>
+			<step>OCA\EinkaufCheck\Repair\EnsureEinkaufCheckSchema</step>
+		</post-migration>
+	</repair-steps>
+</info>

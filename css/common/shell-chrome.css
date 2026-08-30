@@ -1,0 +1,802 @@
+/* Shell chrome parity with arbeitszeitcheck (prefix ekc-). */
+/* ── Skip link / live regions ─────────────────────────────── */
+.ekc-skip-link {
+	position: absolute;
+	left: -9999px;
+	top: var(--ekc-space-2);
+	padding: var(--ekc-space-2) var(--ekc-space-4);
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+	border-radius: var(--ekc-radius-sm);
+	z-index: 1000;
+	font-weight: 600;
+	text-decoration: none;
+}
+.ekc-skip-link:focus,
+.ekc-skip-link:focus-visible {
+	left: var(--ekc-space-3);
+	outline: 3px solid var(--color-primary-element-text, #fff);
+	outline-offset: 2px;
+}
+
+/* ===== Skip links (AZ parity) — CRITICAL =====
+ * The nav skip link is the first child of the flex app wrapper. Without
+ * position:absolute it becomes a full-height flex column and destroys the
+ * sidebar/content layout. Hide off-screen until :focus / :focus-visible.
+ */
+#content.app-einkaufcheck .skip-link,
+#content.app-einkaufcheck a.ekc-skip-link--nav {
+	position: absolute !important;
+	left: -9999px;
+	top: var(--ekc-space-2, 8px);
+	z-index: 10000;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	min-height: 44px;
+	width: max-content;
+	max-width: calc(100vw - 1rem);
+	height: auto;
+	margin: 0;
+	padding: var(--ekc-space-2, 8px) var(--ekc-space-4, 16px);
+	flex: none;
+	align-self: flex-start;
+	box-sizing: border-box;
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+	border-radius: var(--ekc-radius-sm, 6px);
+	font-weight: 600;
+	text-decoration: none;
+	line-height: 1.3;
+}
+#content.app-einkaufcheck .skip-link:focus,
+#content.app-einkaufcheck .skip-link:focus-visible,
+#content.app-einkaufcheck a.ekc-skip-link--nav:focus,
+#content.app-einkaufcheck a.ekc-skip-link--nav:focus-visible {
+	left: 6px;
+	top: 6px;
+	outline: 3px solid var(--color-primary-element-text, #fff);
+	outline-offset: 2px;
+}
+#content.app-einkaufcheck #einkaufcheck-app,
+#content.app-einkaufcheck .einkaufcheck-app {
+	position: relative;
+}
+
+/* Buttons — AZ components.css touch targets (WCAG 2.5.5) */
+#content.app-einkaufcheck .ekc-btn,
+#content.app-einkaufcheck .button,
+#content.app-einkaufcheck button.button,
+#content.app-einkaufcheck a.button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ekc-space-2, 0.5rem);
+	min-height: var(--ekc-touch, 44px) !important;
+	min-width: var(--ekc-touch, 44px);
+	height: auto !important;
+	padding: 0.625rem 1.15rem;
+	box-sizing: border-box;
+	border-radius: var(--ekc-radius-md, 12px);
+	font-weight: 600;
+	line-height: 1.25;
+	text-decoration: none;
+	cursor: pointer;
+}
+#content.app-einkaufcheck .ekc-btn--sm,
+#content.app-einkaufcheck .button.small,
+#content.app-einkaufcheck .button--sm {
+	min-height: var(--ekc-touch, 44px);
+	min-width: var(--ekc-touch, 44px);
+	padding: var(--ekc-space-2) var(--ekc-space-3);
+}
+/* ===== END AZ skip/btn parity ===== */
+
+/* ===== AZ content surfaces — cards/sections/buttons (match azc-card / azc-btn) ===== */
+#content.app-einkaufcheck #app-content .ekc-card,
+#content.app-einkaufcheck #app-content .ekc-section,
+#content.app-einkaufcheck #app-content .ekc-filter-panel {
+	background: var(--ekc-bg-card, var(--color-main-background));
+	border: 1px solid var(--ekc-border, var(--color-border));
+	border-radius: var(--ekc-radius-md, 12px);
+	box-shadow: var(--ekc-shadow-sm, 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent));
+	box-sizing: border-box;
+}
+#content.app-einkaufcheck #app-content .ekc-card,
+#content.app-einkaufcheck #app-content .ekc-section {
+	padding: var(--ekc-space-5, 24px);
+	margin-top: var(--ekc-space-5, 24px);
+}
+#content.app-einkaufcheck #app-content .ekc-section:first-child,
+#content.app-einkaufcheck #app-content .ekc-main > .ekc-section:first-of-type,
+#content.app-einkaufcheck #app-content .ekc-main > .ekc-card:first-of-type,
+#content.app-einkaufcheck #app-content .ekc-main > .ekc-filter-panel:first-of-type {
+	margin-top: 0;
+}
+#content.app-einkaufcheck #app-content .ekc-section__title,
+#content.app-einkaufcheck #app-content .ekc-card__title {
+	margin: 0 0 var(--ekc-space-3, 12px);
+	font-size: var(--ekc-fs-lg, 1.125rem);
+	font-weight: 600;
+	line-height: var(--ekc-line-tight, 1.2);
+	color: var(--ekc-text, var(--color-main-text));
+}
+/*
+ * Bachus / AZ parity: structured cards must match Filter panel chrome.
+ * Plain .ekc-card { padding } above is (2,2,0) — without this peer rule, list
+ * headers stay inset on white and look nothing like iv-filter-panel__head.
+ */
+#content.app-einkaufcheck #app-content .ekc-card:has(.ekc-card__header),
+#content.app-einkaufcheck #app-content .ekc-card:has(.ekc-card__body),
+#content.app-einkaufcheck #app-content .ekc-filter-panel {
+	padding: 0;
+	overflow: hidden;
+}
+#content.app-einkaufcheck #app-content .ekc-filter-panel__head,
+#content.app-einkaufcheck #app-content .ekc-filter-panel > header,
+#content.app-einkaufcheck #app-content .ekc-card__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ekc-space-3, 12px) var(--ekc-space-4, 16px);
+	padding: var(--ekc-space-5, 24px);
+	border-bottom: 1px solid var(--ekc-border, var(--color-border));
+	background: var(--ekc-bg-soft, color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%));
+}
+/* Title + hint stack. space-between on the shared rule parked the intro
+   on the far right in 8px type on top of the fields. */
+#content.app-einkaufcheck #app-content .ekc-filter-panel__head,
+#content.app-einkaufcheck #app-content .ekc-filter-panel > header {
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+}
+#content.app-einkaufcheck #app-content .ekc-filter-panel__head h2,
+#content.app-einkaufcheck #app-content .ekc-filter-panel > header h2,
+#content.app-einkaufcheck #app-content .ekc-card__header .ekc-card__title {
+	margin: 0;
+}
+#content.app-einkaufcheck #app-content .ekc-filter-panel__intro,
+#content.app-einkaufcheck #app-content .ekc-card__header .ekc-card__lead {
+	margin: var(--ekc-space-2, 8px) 0 0;
+	max-width: 65ch;
+	font-size: var(--ekc-fs-sm, 0.875rem);
+	line-height: var(--ekc-line-base, 1.5);
+	color: var(--ekc-muted, var(--color-text-maxcontrast));
+}
+#content.app-einkaufcheck #app-content .ekc-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-4, 16px);
+	padding: var(--ekc-space-5, 24px);
+}
+#content.app-einkaufcheck #app-content .ekc-card__body--table {
+	padding: 0;
+}
+/* Body owns padding (AZC azc-card__body). Form itself stays flush. */
+#content.app-einkaufcheck #app-content .ekc-filter-panel__body {
+	padding: var(--ekc-space-5, 24px);
+}
+#content.app-einkaufcheck #app-content .ekc-filter-panel__form,
+#content.app-einkaufcheck #app-content .ekc-filter-panel > form,
+#content.app-einkaufcheck #app-content .ekc-filter-panel > .form {
+	padding: 0;
+}
+/* Buttons — AZ azc-btn uses radius-md (12px), not sm */
+#content.app-einkaufcheck #app-content .ekc-btn,
+#content.app-einkaufcheck #app-content .button,
+#content.app-einkaufcheck #app-content button.button,
+#content.app-einkaufcheck #app-content a.button {
+	border-radius: var(--ekc-radius-md, 12px);
+	min-height: var(--ekc-touch, 44px) !important;
+	padding: 0.625rem 1.15rem;
+	font-weight: 600;
+}
+#content.app-einkaufcheck #app-content .ekc-btn--sm,
+#content.app-einkaufcheck #app-content .button.small,
+#content.app-einkaufcheck #app-content .button--sm {
+	border-radius: var(--ekc-radius-sm, 6px);
+	min-height: var(--ekc-touch, 44px);
+	min-width: var(--ekc-touch, 44px);
+	padding: var(--ekc-space-2) var(--ekc-space-3);
+}
+#content.app-einkaufcheck #app-content .ekc-table-wrap {
+	border: 1px solid var(--ekc-border, var(--color-border));
+	border-radius: var(--ekc-radius-md, 12px);
+	overflow-x: auto;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+	background: var(--ekc-bg-card, var(--color-main-background));
+}
+/* Principle 14: card is the only frame — no wrap border inside headed cards or table-solo. */
+#content.app-einkaufcheck #app-content .ekc-card--table-solo > .ekc-table-wrap,
+#content.app-einkaufcheck #app-content .ekc-card:has(.ekc-card__header) > .ekc-card__body > .ekc-table-wrap,
+#content.app-einkaufcheck #app-content .ekc-card > .ekc-table-wrap {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	overflow-x: auto;
+	overflow-y: auto;
+}
+/* Empty states — AZ-like bordered soft panel (never apply to .ekc-howto) */
+#content.app-einkaufcheck #app-content .ekc-empty:not(.ekc-howto):not(.ekc-stocktake-howto),
+#content.app-einkaufcheck #app-content .ekc-empty-state {
+	border: 1px dashed var(--ekc-border-strong, var(--color-border));
+	border-radius: var(--ekc-radius-md, 12px);
+	padding: var(--ekc-space-6, 32px) var(--ekc-space-5, 24px);
+	text-align: center;
+	background: var(--ekc-bg-soft, transparent);
+}
+/* ===== END AZ content surfaces ===== */
+
+
+/* ===== AZ table parity (prefix iv) =====
+ * Matches arbeitszeitcheck/css/common/components.css table chrome.
+ * Covers both .ekc-table and legacy .table / .grid-table.
+ */
+#content.app-einkaufcheck .ekc-table-wrap,
+#content.app-einkaufcheck .table-container,
+#content.app-einkaufcheck .table-responsive {
+	overflow-x: auto;
+	border: 1px solid var(--ekc-border, var(--color-border));
+	border-radius: var(--ekc-radius-md, 12px);
+	background-color: var(--ekc-bg-card, var(--color-main-background));
+	-webkit-overflow-scrolling: touch;
+	width: 100%;
+	box-sizing: border-box;
+}
+#content.app-einkaufcheck .ekc-table,
+#content.app-einkaufcheck .table,
+#content.app-einkaufcheck .grid-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: var(--ekc-fs-sm, 0.875rem);
+	margin-bottom: 0;
+}
+#content.app-einkaufcheck .ekc-table thead,
+#content.app-einkaufcheck .table thead,
+#content.app-einkaufcheck .grid-table thead {
+	background-color: var(--color-background-dark, var(--ekc-bg-stripe, transparent));
+}
+#content.app-einkaufcheck .ekc-table th,
+#content.app-einkaufcheck .table th,
+#content.app-einkaufcheck .grid-table th {
+	padding: var(--ekc-space-3, 0.75rem) var(--ekc-space-4, 1rem);
+	text-align: left;
+	font-weight: 600;
+	color: var(--ekc-text, var(--color-main-text));
+	border-bottom: 1px solid var(--ekc-border, var(--color-border));
+	white-space: nowrap;
+	vertical-align: middle;
+	background-color: var(--color-background-dark, rgba(127, 127, 127, 0.12));
+}
+#content.app-einkaufcheck .ekc-table td,
+#content.app-einkaufcheck .table td,
+#content.app-einkaufcheck .grid-table td {
+	padding: var(--ekc-space-3, 0.75rem) var(--ekc-space-4, 1rem);
+	border-bottom: 1px solid var(--ekc-border, var(--color-border));
+	color: var(--ekc-text, var(--color-main-text));
+	vertical-align: middle;
+}
+#content.app-einkaufcheck .ekc-table tbody tr:last-child td,
+#content.app-einkaufcheck .table tbody tr:last-child td,
+#content.app-einkaufcheck .grid-table tbody tr:last-child td {
+	border-bottom: none;
+}
+#content.app-einkaufcheck .ekc-table.table--hover tbody tr:hover,
+#content.app-einkaufcheck .ekc-table--hover tbody tr:hover,
+#content.app-einkaufcheck .table--hover tbody tr:hover,
+#content.app-einkaufcheck .grid-table.table--hover tbody tr:hover {
+	background-color: var(--color-background-hover);
+}
+/* ===== END AZ table parity ===== */
+
+
+.ekc-sr-only {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	border: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* ── App shell ─────────────────────────────────────────────── */
+/* Sidebar alignment: see navigation.css (canonical); keep minimal guard here too */
+#content.app-einkaufcheck #app-navigation .nav-menu a,
+#content.app-einkaufcheck #app-navigation .nav-submenu a,
+#content.app-einkaufcheck #app-navigation .nav-parent-toggle {
+	justify-content: flex-start;
+	text-align: left;
+}
+
+#app-content.ekc-app {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	text-align: left;
+	min-height: 100%;
+	background: var(--ekc-bg-soft);
+}
+#app-content.ekc-app #app-content-wrapper.ekc-shell {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	text-align: left;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	margin: 0;
+	padding:
+		calc(var(--ekc-space-5) + env(safe-area-inset-top, 0px))
+		calc(var(--ekc-space-5) + env(safe-area-inset-right, 0px))
+		calc(var(--ekc-space-7) + env(safe-area-inset-bottom, 0px))
+		calc(var(--ekc-space-5) + env(safe-area-inset-left, 0px));
+	box-sizing: border-box;
+	overflow-x: visible;
+}
+#app-content.ekc-app--dashboard .ekc-dashboard-alerts .ekc-callout {
+	margin: 0;
+}
+#app-content.ekc-app #ekc-main-content.ekc-main {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	text-align: left;
+	gap: var(--ekc-space-5);
+	outline: none;
+}
+#app-content.ekc-app--admin-notifications #ekc-main-content,
+#app-content.ekc-app--admin-settings #ekc-main-content {
+	gap: var(--ekc-space-4);
+}
+#ekc-main-content.ekc-main:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 60%, transparent);
+	outline-offset: 2px;
+}
+
+/* Heading contrast in all NC themes */
+#app-content.ekc-app h1,
+#app-content.ekc-app h2,
+#app-content.ekc-app h3 {
+	color: var(--ekc-text) !important;
+	opacity: 1 !important;
+}
+
+/* ── Header / breadcrumb ───────────────────────────────────── */
+.ekc-page-header {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-3);
+	margin-bottom: var(--ekc-space-5);
+}
+#app-content.ekc-app .ekc-breadcrumb {
+	font-size: var(--ekc-fs-sm);
+	line-height: var(--ekc-line-tight);
+	color: var(--ekc-muted);
+}
+#app-content.ekc-app .ekc-breadcrumb__list {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+#app-content.ekc-app .ekc-breadcrumb__item {
+	display: inline-flex;
+	align-items: center;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	max-width: 100%;
+}
+#app-content.ekc-app .ekc-breadcrumb__item:not(:last-child)::after {
+	content: '/';
+	margin-inline: var(--ekc-space-2);
+	color: var(--ekc-muted);
+	font-weight: 400;
+	opacity: 0.65;
+	pointer-events: none;
+	user-select: none;
+}
+#app-content.ekc-app .ekc-breadcrumb__link {
+	/* Explicit main-text: primary accent as link ink fails AA for many custom brands (AZC). */
+	color: var(--ekc-text) !important;
+	font-weight: 600;
+	text-decoration: none;
+	border-radius: var(--ekc-radius-sm);
+	padding-block: 2px;
+}
+#app-content.ekc-app .ekc-breadcrumb__link:hover {
+	text-decoration: underline;
+}
+#app-content.ekc-app .ekc-breadcrumb__link:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--color-primary-element, #0082c9) 55%, transparent);
+	outline-offset: 2px;
+}
+#app-content.ekc-app .ekc-breadcrumb__text {
+	color: var(--ekc-muted);
+	font-weight: 500;
+}
+#app-content.ekc-app .ekc-breadcrumb__item--current {
+	color: var(--ekc-text);
+	min-width: 0;
+}
+#app-content.ekc-app .ekc-breadcrumb__current {
+	font-weight: 600;
+	color: var(--ekc-text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: min(100%, 28rem);
+}
+.ekc-page-header__main {
+	display: grid;
+	/* DutyCheck parity: icon | title — actions always full-width below.
+	 * Never put actions in a 3rd column; that crushes the lead into a
+	 * word-salad column beside Receive / Issue / More. */
+	grid-template-columns: 56px minmax(0, 1fr);
+	gap: var(--ekc-space-4);
+	align-items: start;
+	min-width: 0;
+	width: 100%;
+	max-width: 100%;
+}
+.ekc-page-header__text {
+	min-width: 0;
+	overflow-wrap: break-word;
+}
+.ekc-page-header__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border-radius: var(--ekc-radius-md);
+	background: var(--ekc-tint-info);
+	color: var(--color-primary-element, #0082c9);
+}
+.ekc-page-header__icon-svg {
+	width: 28px;
+	height: 28px;
+	max-width: none;
+	stroke: currentColor;
+	fill: none;
+	color: inherit;
+	stroke-width: var(--ekc-icon-stroke, 2);
+}
+.ekc-page-header__text h1 {
+	margin: 0 0 var(--ekc-space-1);
+	font-size: var(--ekc-fs-2xl);
+	line-height: var(--ekc-line-tight);
+	overflow-wrap: break-word;
+}
+.ekc-page-header__lead {
+	margin: 0;
+	color: var(--ekc-muted);
+	font-size: var(--ekc-fs-md);
+	line-height: var(--ekc-line-base);
+	max-width: 60ch;
+	overflow-wrap: break-word;
+}
+.ekc-page-header__actions {
+	grid-column: 1 / -1;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ekc-space-2);
+	align-items: center;
+	justify-content: flex-start;
+	min-width: 0;
+	max-width: 100%;
+	width: 100%;
+}
+
+/* ── Scope strip ───────────────────────────────────────────── */
+.ekc-scope-strip {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ekc-space-2);
+	padding: var(--ekc-space-2) var(--ekc-space-3);
+	border: 1px solid var(--ekc-border);
+	border-radius: var(--ekc-radius-sm);
+	background: var(--ekc-bg-card);
+	font-size: var(--ekc-fs-sm);
+}
+.ekc-scope-strip__label {
+	color: var(--ekc-muted);
+	font-weight: 500;
+}
+.ekc-scope-strip__value {
+	font-weight: 600;
+	color: var(--ekc-text);
+}
+.ekc-scope-strip__sep {
+	color: var(--ekc-muted);
+}
+.ekc-scope-strip__chip {
+	text-decoration: none;
+}
+
+/* ── Buttons (iv-btn taxonomy) ──────────────────────────────── */
+.ekc-btn,
+.ekc-app .btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ekc-space-2);
+	min-height: var(--ekc-touch, 44px);
+	min-width: var(--ekc-touch, 44px);
+	padding: var(--ekc-space-2) var(--ekc-space-4);
+	border-radius: var(--ekc-radius-sm);
+	font-size: var(--ekc-fs-md);
+	font-weight: 600;
+	line-height: 1.2;
+	text-decoration: none;
+	cursor: pointer;
+	border: 1px solid transparent;
+	transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.ekc-btn:focus-visible,
+.ekc-app .btn:focus-visible {
+	outline: var(--ekc-focus, 3px) solid var(--color-primary-element, #0082c9);
+	outline-offset: 2px;
+}
+.ekc-btn--primary,
+.ekc-app .btn--primary {
+	min-height: var(--ekc-touch-lg, 48px);
+	background: var(--color-primary-element, #0082c9);
+	color: var(--color-primary-element-text, #fff);
+}
+.ekc-btn--secondary,
+.ekc-app .btn--secondary {
+	background: var(--color-background-dark, var(--ekc-bg-soft));
+	color: var(--ekc-text);
+	border-color: var(--ekc-border);
+}
+.ekc-btn--danger,
+.ekc-app .btn--danger {
+	min-height: var(--ekc-touch-lg, 48px);
+	background: var(--ekc-danger-fill, var(--color-element-error, #c90000));
+	border-color: var(--ekc-danger-fill, var(--color-element-error, #c90000));
+	color: var(--ekc-danger-on-fill, var(--color-primary-element-text, #fff));
+}
+.ekc-btn--danger:hover:not(:disabled),
+.ekc-app .btn--danger:hover:not(:disabled) {
+	background: var(--ekc-danger-fill-hover, var(--color-element-error, #c90000));
+	border-color: var(--ekc-danger-fill-hover, var(--color-element-error, #c90000));
+}
+.ekc-btn--ghost {
+	background: transparent;
+	color: var(--ekc-text);
+	border-color: transparent;
+}
+.ekc-btn--sm {
+	min-height: var(--ekc-touch, 44px);
+	padding: var(--ekc-space-1) var(--ekc-space-3);
+	font-size: var(--ekc-fs-sm);
+}
+.ekc-btn[aria-busy="true"] {
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+/* Badges: css/common/badges.css (loaded after app-vanilla to override legacy rules) */
+
+/* ── Cards / callouts ──────────────────────────────────────── */
+.ekc-card {
+	background: var(--ekc-bg-card);
+	border: 1px solid var(--ekc-border);
+	border-radius: var(--ekc-radius-md);
+	padding: var(--ekc-space-5);
+	box-shadow: var(--ekc-shadow-sm);
+}
+#app-content.ekc-app .ekc-card:has(.ekc-card__header),
+#app-content.ekc-app .ekc-card:has(.ekc-card__body) {
+	padding: 0;
+}
+#app-content.ekc-app .ekc-card__header {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ekc-space-3) var(--ekc-space-4);
+	padding: var(--ekc-space-5);
+	border-bottom: 1px solid var(--ekc-border);
+	background: var(--ekc-bg-soft);
+}
+#app-content.ekc-app .ekc-card__header-text {
+	flex: 1 1 14rem;
+	min-width: 0;
+}
+#app-content.ekc-app .ekc-card__header-actions {
+	flex: 0 0 auto;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--ekc-space-2);
+}
+#app-content.ekc-app .ekc-card__title {
+	margin: 0;
+	font-size: var(--ekc-fs-lg);
+	font-weight: 600;
+	line-height: var(--ekc-line-tight);
+	color: var(--ekc-text);
+}
+#app-content.ekc-app .ekc-card__lead {
+	margin: var(--ekc-space-2) 0 0;
+	max-width: 52rem;
+	font-size: var(--ekc-fs-sm);
+	line-height: var(--ekc-line-base);
+	color: var(--ekc-muted);
+}
+#app-content.ekc-app .ekc-card__body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-4);
+	padding: var(--ekc-space-5);
+}
+#app-content.ekc-app .ekc-btn .ekc-btn__icon,
+#app-content.ekc-app .ekc-btn .ekc-icon {
+	width: var(--ekc-icon-md);
+	height: var(--ekc-icon-md);
+	flex-shrink: 0;
+}
+#app-content.ekc-app .ekc-btn--sm .ekc-btn__icon,
+#app-content.ekc-app .ekc-btn--sm .ekc-icon {
+	width: var(--ekc-icon-sm);
+	height: var(--ekc-icon-sm);
+}
+/* Legacy card header shim (compliance/dashboard until fully migrated) */
+#app-content.ekc-app .card-header--with-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ekc-space-3) var(--ekc-space-4);
+	padding: var(--ekc-space-4) var(--ekc-space-5);
+	margin-bottom: 0;
+	border-bottom: 1px solid var(--ekc-border);
+	background: var(--ekc-bg-soft);
+}
+#app-content.ekc-app .card-header--with-actions .card-title {
+	margin: 0;
+	font-size: var(--ekc-fs-lg);
+	font-weight: 600;
+	color: var(--ekc-text);
+}
+#app-content.ekc-app .card-header--with-actions .ekc-btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+#app-content.ekc-app .ekc-card + .ekc-card {
+	margin-top: var(--ekc-space-5);
+}
+#app-content.ekc-app .compliance-dashboard__status .ekc-callout {
+	margin-bottom: 0;
+}
+
+
+
+/*
+ * Responsive page header — mobile-first (NC breakpoints).
+ * Base = phone; 481 = tablet actions row; 1024 = full desktop chrome (pixel-identical ≥1024).
+ */
+#app-content.ekc-app .ekc-page-header__icon,
+.ekc-page-header__icon {
+	width: 48px;
+	height: 48px;
+}
+
+#app-content.ekc-app .ekc-page-header__icon-svg,
+.ekc-page-header__icon-svg {
+	width: 24px;
+	height: 24px;
+}
+
+#app-content.ekc-app .ekc-page-header__main,
+.ekc-page-header__main {
+	grid-template-columns: 48px minmax(0, 1fr);
+}
+
+#app-content.ekc-app #app-content-wrapper.ekc-shell {
+	padding-inline: calc(var(--ekc-space-3) + env(safe-area-inset-left, 0px))
+		calc(var(--ekc-space-3) + env(safe-area-inset-right, 0px));
+}
+
+#app-content.ekc-app .ekc-page-header__actions .ekc-btn,
+#app-content.ekc-app .ekc-page-header__actions .button,
+#app-content.ekc-app .ekc-page-header__actions a.button {
+	flex: 1 1 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
+#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more {
+	flex: 1 1 100%;
+}
+
+#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more__body .ekc-btn,
+#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more__body .button,
+#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more__body a.button {
+	flex: 0 0 auto;
+	min-width: 0;
+	width: 100%;
+}
+
+#app-content.ekc-app .ekc-page-header__text h1 {
+	font-size: var(--ekc-fs-xl);
+}
+
+#app-content.ekc-app .ekc-page-header__lead {
+	max-width: 100%;
+}
+
+/* 481px = phablet/tablet: actions share a row; restore shell side padding from space-5. */
+@media (min-width: 481px) {
+	#app-content.ekc-app #app-content-wrapper.ekc-shell {
+		padding-inline: calc(var(--ekc-space-5) + env(safe-area-inset-left, 0px))
+			calc(var(--ekc-space-5) + env(safe-area-inset-right, 0px));
+	}
+
+	#app-content.ekc-app .ekc-page-header__actions .ekc-btn,
+	#app-content.ekc-app .ekc-page-header__actions .button,
+	#app-content.ekc-app .ekc-page-header__actions a.button {
+		flex: 1 1 auto;
+		min-width: min(100%, 10rem);
+		max-width: 100%;
+	}
+
+	#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more {
+		flex: 0 1 auto;
+	}
+}
+
+/* 1024px = NC desktop: 56px icon well, 2xl title, capped lead (matches prior ≥1024). */
+@media (min-width: 1024px) {
+	#app-content.ekc-app .ekc-page-header__icon,
+	.ekc-page-header__icon {
+		width: 56px;
+		height: 56px;
+	}
+
+	#app-content.ekc-app .ekc-page-header__icon-svg,
+	.ekc-page-header__icon-svg {
+		width: 28px;
+		height: 28px;
+	}
+
+	#app-content.ekc-app .ekc-page-header__main,
+	.ekc-page-header__main {
+		grid-template-columns: 56px minmax(0, 1fr);
+	}
+
+	#app-content.ekc-app .ekc-page-header__actions .ekc-btn,
+	#app-content.ekc-app .ekc-page-header__actions .button,
+	#app-content.ekc-app .ekc-page-header__actions a.button {
+		flex: 0 1 auto;
+		min-width: 44px;
+		max-width: none;
+	}
+
+	#app-content.ekc-app .ekc-page-header__actions .ekc-actions-more {
+		flex: 0 1 auto;
+	}
+
+	#app-content.ekc-app .ekc-page-header__text h1 {
+		font-size: var(--ekc-fs-2xl);
+	}
+
+	#app-content.ekc-app .ekc-page-header__lead {
+		max-width: 60ch;
+	}
+}

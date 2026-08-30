@@ -1,0 +1,947 @@
+/* Auto-adapted from arbeitszeitcheck/css/common/page-patterns.css for EinkaufCheck shell parity. Do not invent divergent layout rules here. */
+/**
+ * Shared page layout patterns (stack, grid, filters, empty states).
+ * Shell width modifiers live here; #app-content-wrapper.ekc-shell in app.css sets base padding.
+ */
+
+/* ── Shell width ───────────────────────────────────────────── */
+#app-content.ekc-app #app-content-wrapper.ekc-shell--wide {
+	max-width: none;
+	margin-inline: 0;
+}
+
+#app-content.ekc-app #app-content-wrapper.ekc-shell--constrained {
+	max-width: 72rem;
+	margin-inline: auto;
+}
+
+#app-content.ekc-app #app-content-wrapper.ekc-shell--minimal {
+	max-width: 40rem;
+	margin-inline: auto;
+	padding: var(--ekc-space-6) var(--ekc-space-5);
+}
+
+/* ── Page stack (vertical rhythm inside main) ───────────────── */
+#app-content.ekc-app .ekc-page-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: var(--ekc-space-5);
+	width: 100%;
+	min-width: 0;
+}
+
+#app-content.ekc-app .ekc-page-stack > * {
+	margin: 0;
+}
+
+/* ── Page grid (offers + side lists / admin side-by-side) ─── */
+/* Mobile-first: single column below NC tablet; two equal columns from 769px (desktop-identical). */
+#app-content.ekc-app .ekc-page-grid {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--ekc-space-5);
+	width: 100%;
+	min-width: 0;
+}
+
+/* 769px = NC tablet lower bound: restore two-column page grid (was ≥769 before refactor). */
+@media (min-width: 769px) {
+	#app-content.ekc-app .ekc-page-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* ── Legacy .section reset inside app shell ─────────────────── */
+#app-content.ekc-app #ekc-main-content .section {
+	margin: 0;
+	padding: 0;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+}
+
+#app-content.ekc-app #ekc-main-content .section::before {
+	display: none;
+}
+
+/* ── Filter panel (manager + compliance lists) ──────────────── */
+#app-content.ekc-app .ekc-filter-panel {
+	border-left: 4px solid var(--color-primary-element, #0082c9);
+}
+
+#app-content.ekc-app .ekc-filter-panel__head {
+	/* Card chrome (shell-chrome) already separates head/body — no extra gap. */
+	margin-bottom: 0;
+}
+
+#app-content.ekc-app .ekc-filter-panel__head-text {
+	flex: 1 1 14rem;
+	min-width: 0;
+}
+
+#app-content.ekc-app .ekc-filter-panel__head h2 {
+	margin: 0 0 var(--ekc-space-2);
+	font-size: var(--ekc-fs-lg);
+	font-weight: 600;
+	line-height: var(--ekc-line-tight);
+}
+
+#app-content.ekc-app .ekc-filter-panel__intro {
+	margin: 0;
+	max-width: 65ch;
+	font-size: var(--ekc-fs-sm);
+	line-height: var(--ekc-line-base);
+	color: var(--ekc-muted);
+}
+
+#app-content.ekc-app .ekc-filter-panel__form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-3);
+	margin: 0;
+	align-items: stretch;
+}
+
+#app-content.ekc-app .ekc-filter-grid {
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1.15fr)
+		minmax(0, 1.6fr)
+		minmax(0, 1fr)
+		auto;
+	grid-template-rows: auto minmax(44px, auto);
+	column-gap: var(--ekc-space-5);
+	row-gap: var(--ekc-space-2);
+	align-items: stretch;
+}
+
+/* Items / Locations: search + actions (AZC time-entries rhythm). */
+#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--simple {
+	grid-template-columns: minmax(0, 1fr) max-content;
+	grid-template-rows: auto;
+	grid-template-areas: 'search actions';
+	column-gap: var(--ekc-space-4);
+	row-gap: var(--ekc-space-4);
+	align-items: end;
+}
+
+#app-content.ekc-app .ekc-filter-grid--simple .ekc-filter-field--search { grid-area: search; }
+#app-content.ekc-app .ekc-filter-grid--simple .ekc-filter-field--actions { grid-area: actions; }
+
+#app-content.ekc-app .ekc-filter-grid--simple > .ekc-filter-field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-2);
+	min-width: 0;
+}
+
+#app-content.ekc-app .ekc-filter-grid--simple .ekc-filter-field--actions .ekc-filter-field__control--actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: var(--ekc-space-2);
+	min-height: 44px;
+	min-width: 160px;
+	margin-top: 0;
+}
+
+#app-content.ekc-app .ekc-filter-grid--extended {
+	grid-template-columns:
+		minmax(0, 1fr)
+		minmax(0, 1.45fr)
+		minmax(0, 0.85fr)
+		minmax(0, 0.85fr)
+		auto;
+}
+
+/* Movements: AZC manager-scope pattern (criteria + actions / date range).
+ * Named areas isolate from global subgrid; see also app.css (cache-bust).
+ */
+#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--movements {
+	grid-template-columns:
+		minmax(0, 1.1fr)
+		minmax(0, 1.45fr)
+		minmax(0, 1.15fr)
+		max-content;
+	grid-template-rows: auto;
+	grid-template-areas:
+		'kind item location actions'
+		'dates dates dates dates';
+	column-gap: var(--ekc-space-4);
+	row-gap: var(--ekc-space-4);
+	align-items: stretch;
+}
+
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--kind { grid-area: kind; }
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--item { grid-area: item; }
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--location { grid-area: location; }
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--actions { grid-area: actions; }
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--dates { grid-area: dates; }
+
+#app-content.ekc-app .ekc-filter-field__control > .ekc-input,
+#app-content.ekc-app .ekc-filter-field__control > .form-input,
+#app-content.ekc-app .ekc-filter-field__control > .form-select {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+#app-content.ekc-app .ekc-filter-grid--record {
+	grid-template-columns:
+		minmax(0, 1.2fr)
+		minmax(0, 1fr)
+		minmax(0, 1fr)
+		minmax(0, 1fr)
+		auto;
+}
+
+/* Two-row subgrid assumes label + control only. A third child (.form-help)
+   lands on the control row. Offers/trends opt out in app.css. */
+#app-content.ekc-app .ekc-filter-field {
+	display: grid;
+	grid-template-rows: subgrid;
+	grid-row: span 2;
+	gap: var(--ekc-space-2);
+	min-width: 0;
+}
+
+/* Movements fields: break out of parent subgrid (AZC manager-scope). */
+#app-content.ekc-app .ekc-filter-grid--movements > .ekc-filter-field {
+	display: grid;
+	grid-template-rows: auto minmax(44px, auto);
+	gap: var(--ekc-space-2);
+	min-width: 0;
+}
+
+#app-content.ekc-app .ekc-filter-grid--movements > .ekc-filter-field--dates {
+	grid-template-rows: auto auto;
+}
+
+#app-content.ekc-app .ekc-filter-field__label {
+	font-size: var(--ekc-fs-sm);
+	font-weight: 600;
+	color: var(--ekc-text);
+}
+
+#app-content.ekc-app .ekc-filter-field__control {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	min-height: 44px;
+	min-width: 0;
+}
+
+#app-content.ekc-app .ekc-filter-field--dates .ekc-filter-field__control {
+	min-height: 0;
+}
+
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--actions .ekc-filter-field__control--actions {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-start;
+	gap: var(--ekc-space-2);
+	min-height: 44px;
+	/* Align with sibling controls when Actions label is screen-reader-only */
+	margin-top: calc((var(--ekc-fs-sm, 0.875rem) * var(--ekc-line-tight, 1.25)) + var(--ekc-space-2, 0.5rem));
+}
+
+#app-content.ekc-app .ekc-date-range {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: var(--ekc-space-2) var(--ekc-space-3);
+	width: 100%;
+	max-width: 32rem;
+}
+
+#app-content.ekc-app .ekc-date-range__part {
+	display: block;
+	flex: 1 1 0;
+	min-width: 9.5rem;
+	max-width: 14rem;
+}
+
+#app-content.ekc-app .ekc-date-range__sublabel {
+	font-size: var(--ekc-fs-xs);
+	font-weight: 500;
+	color: var(--ekc-muted);
+}
+
+#app-content.ekc-app .ekc-date-range__sep {
+	flex: 0 0 auto;
+	align-self: center;
+	padding: 0;
+	margin: 0;
+	white-space: nowrap;
+	color: var(--ekc-muted);
+	font-size: var(--ekc-fs-sm);
+	font-weight: 500;
+}
+
+#app-content.ekc-app .ekc-filter-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--ekc-space-2);
+	grid-row: span 2;
+	align-self: end;
+}
+
+/* AZC time-entries: actions live in a filter-field with spacer label for subgrid align */
+#app-content.ekc-app .ekc-filter-field__control--actions {
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-start;
+	gap: var(--ekc-space-2);
+}
+
+#app-content.ekc-app .ekc-filter-feedback {
+	margin: var(--ekc-space-3) 0 0;
+}
+
+#app-content.ekc-app .ekc-filter-feedback[hidden] {
+	display: none !important;
+}
+
+#app-content.ekc-app .ekc-filter-field__control .form-input[aria-invalid='true'],
+#app-content.ekc-app .ekc-filter-field__control .form-select[aria-invalid='true'] {
+	border-color: var(--ekc-danger-border, var(--color-error-text, var(--color-error)));
+	outline-color: var(--ekc-danger-ink, var(--color-error-text, var(--color-error)));
+}
+
+/*
+ * Filter grids — mobile-first cascade (NC + legacy AZC widths).
+ * Base = single column; 769 = tablet multi-col; 901 = date row; 1201 = full desktop cols.
+ */
+#app-content.ekc-app .ekc-filter-grid,
+#app-content.ekc-app .ekc-filter-grid--extended,
+#app-content.ekc-app .ekc-filter-grid--record {
+	grid-template-columns: 1fr;
+	grid-template-rows: auto;
+}
+
+#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--movements {
+	grid-template-columns: minmax(0, 1fr) max-content;
+	grid-template-areas:
+		'kind actions'
+		'item item'
+		'location location'
+		'dates dates';
+}
+
+#app-content.ekc-app .ekc-filter-field {
+	grid-row: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+#app-content.ekc-app .ekc-filter-actions,
+#app-content.ekc-app .ekc-filter-field--actions .ekc-filter-field__control--actions {
+	grid-row: auto;
+	width: 100%;
+	justify-content: stretch;
+}
+
+#app-content.ekc-app .ekc-filter-grid--movements .ekc-filter-field--actions .ekc-filter-field__control--actions,
+#app-content.ekc-app .ekc-filter-grid--simple .ekc-filter-field--actions .ekc-filter-field__control--actions {
+	margin-top: 0;
+}
+
+#app-content.ekc-app .ekc-filter-actions .ekc-btn,
+#app-content.ekc-app .ekc-filter-actions .btn,
+#app-content.ekc-app .ekc-filter-field__control--actions .ekc-btn,
+#app-content.ekc-app .ekc-filter-field__control--actions .btn {
+	flex: 1 1 auto;
+}
+
+#app-content.ekc-app .ekc-date-range {
+	flex-wrap: wrap;
+	max-width: none;
+}
+
+#app-content.ekc-app .ekc-date-range__part {
+	max-width: none;
+	flex: 1 1 9.5rem;
+}
+
+/* 769px = NC tablet+: restore multi-column filter layouts (2-up until 1201). */
+@media (min-width: 769px) {
+	#app-content.ekc-app .ekc-filter-grid {
+		grid-template-columns:
+			minmax(0, 1.15fr)
+			minmax(0, 1.6fr)
+			minmax(0, 1fr)
+			auto;
+		grid-template-rows: auto minmax(44px, auto);
+	}
+
+	#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--simple {
+		grid-template-columns: minmax(0, 1fr) max-content;
+		grid-template-rows: auto;
+		grid-template-areas: 'search actions';
+	}
+
+	#app-content.ekc-app .ekc-filter-grid--extended,
+	#app-content.ekc-app .ekc-filter-grid--record {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	}
+
+	#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--movements {
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-areas:
+			'kind item'
+			'location actions'
+			'dates dates';
+	}
+
+	#app-content.ekc-app .ekc-filter-field {
+		display: grid;
+		grid-template-rows: subgrid;
+		grid-row: span 2;
+	}
+
+	#app-content.ekc-app .ekc-filter-grid--movements > .ekc-filter-field {
+		display: grid;
+		grid-template-rows: auto minmax(44px, auto);
+		grid-row: auto;
+	}
+
+	#app-content.ekc-app .ekc-filter-actions,
+	#app-content.ekc-app .ekc-filter-field--actions .ekc-filter-field__control--actions {
+		width: auto;
+		justify-content: flex-start;
+	}
+
+	#app-content.ekc-app .ekc-filter-actions .ekc-btn,
+	#app-content.ekc-app .ekc-filter-actions .btn,
+	#app-content.ekc-app .ekc-filter-field__control--actions .ekc-btn,
+	#app-content.ekc-app .ekc-filter-field__control--actions .btn {
+		flex: 0 1 auto;
+	}
+
+	#app-content.ekc-app .ekc-date-range__part {
+		max-width: 14rem;
+		flex: 1 1 0;
+	}
+}
+
+/* 901px = wide tablet: date range on one row (was >900 before refactor). */
+@media (min-width: 901px) {
+	#app-content.ekc-app .ekc-date-range {
+		flex-wrap: nowrap;
+		max-width: 32rem;
+	}
+}
+
+/* 1201px = large desktop: full extended/record/movements column recipes. */
+@media (min-width: 1201px) {
+	#app-content.ekc-app .ekc-filter-grid--extended {
+		grid-template-columns:
+			minmax(0, 1fr)
+			minmax(0, 1.45fr)
+			minmax(0, 0.85fr)
+			minmax(0, 0.85fr)
+			auto;
+	}
+
+	#app-content.ekc-app .ekc-filter-grid--record {
+		grid-template-columns:
+			minmax(0, 1.2fr)
+			minmax(0, 1fr)
+			minmax(0, 1fr)
+			minmax(0, 1fr)
+			auto;
+	}
+
+	#app-content.ekc-app .ekc-filter-grid.ekc-filter-grid--movements {
+		grid-template-columns:
+			minmax(0, 1.1fr)
+			minmax(0, 1.45fr)
+			minmax(0, 1.15fr)
+			max-content;
+		grid-template-areas:
+			'kind item location actions'
+			'dates dates dates dates';
+	}
+}
+
+/* ── Empty / loading states ─────────────────────────────────── */
+#app-content.ekc-app .ekc-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ekc-space-3);
+	padding: var(--ekc-space-7) var(--ekc-space-5);
+	text-align: center;
+	color: var(--ekc-muted);
+}
+
+#app-content.ekc-app .ekc-empty-state__title {
+	margin: 0;
+	font-size: var(--ekc-fs-lg);
+	font-weight: 600;
+	color: var(--ekc-text);
+}
+
+#app-content.ekc-app .ekc-empty-state__text {
+	margin: 0;
+	max-width: 42ch;
+	font-size: var(--ekc-fs-sm);
+	line-height: var(--ekc-line-base);
+}
+
+#app-content.ekc-app .ekc-loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--ekc-space-3);
+	padding: var(--ekc-space-6);
+	color: var(--ekc-muted);
+	font-size: var(--ekc-fs-sm);
+}
+
+#app-content.ekc-app .ekc-loading[aria-busy="true"]::before {
+	content: '';
+	width: 1.25rem;
+	height: 1.25rem;
+	border: 2px solid var(--ekc-border);
+	border-top-color: var(--color-primary-element, #0082c9);
+	border-radius: 50%;
+	animation: ekc-spin 0.8s linear infinite;
+}
+
+@keyframes ekc-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#app-content.ekc-app .ekc-loading[aria-busy="true"]::before {
+		animation: none;
+		border-top-color: var(--ekc-border);
+	}
+}
+
+/* Nextcloud personal settings panel (outside app shell) */
+#einkaufcheck-personal-settings.ekc-nc-settings-panel {
+	max-width: 52rem;
+}
+
+#einkaufcheck-personal-settings .settings-hint {
+	max-width: 60ch;
+	line-height: var(--ekc-line-base, 1.5);
+	color: var(--color-text-maxcontrast, var(--ekc-muted));
+}
+
+#einkaufcheck-personal-settings .settings-subheading {
+	margin: var(--ekc-space-5, 1.25rem) 0 var(--ekc-space-2, 0.5rem);
+	font-size: var(--ekc-fs-md, 1rem);
+	font-weight: 600;
+}
+
+#einkaufcheck-personal-settings .ekc-btn + .ekc-btn {
+	margin-inline-start: var(--ekc-space-2, 0.5rem);
+}
+
+/* Filter panel cards use iv-card header/body padding (app.css); accent bar only on .ekc-filter-panel */
+
+/* ── Data tables (single convention app-wide) ─────────────────
+   Markup: .table-container > .table.table--hover
+   Legacy aliases: .table-responsive, .ekc-table-wrap, .grid-table, .einkaufcheck-table
+   Actions column: .ekc-table-actions-col + .ekc-table-actions
+   Matrix tables: .ekc-table--matrix (admin notification grids)
+   Card layout on narrow screens: .ekc-table--responsive + data-label on td
+   ───────────────────────────────────────────────────────────── */
+#app-content.ekc-app .table-container,
+#app-content.ekc-app .table-responsive,
+#app-content.ekc-app .ekc-table-wrap {
+	margin: 0;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	box-sizing: border-box;
+	overflow-x: auto;
+	overflow-y: visible;
+	-webkit-overflow-scrolling: touch;
+	scroll-padding-inline-end: var(--ekc-space-4, 1rem);
+}
+
+#app-content.ekc-app .ekc-card__body > .table-container,
+#app-content.ekc-app .ekc-card__body > .table-responsive,
+#app-content.ekc-app .ekc-card__body > .ekc-table-wrap {
+	margin-block: 0;
+}
+
+#app-content.ekc-app .table-container .table,
+#app-content.ekc-app .table-container .grid-table,
+#app-content.ekc-app .table-container .einkaufcheck-table,
+#app-content.ekc-app .table-container .report-table,
+#app-content.ekc-app .table-responsive .table,
+#app-content.ekc-app .table-responsive .grid-table,
+#app-content.ekc-app .ekc-table-wrap .table,
+#app-content.ekc-app .ekc-table-wrap .grid-table {
+	margin-bottom: 0;
+	width: 100%;
+	table-layout: auto;
+}
+
+/* Desktop: fill available width; scroll horizontally only when columns need more space */
+@media (min-width: 769px) {
+	#app-content.ekc-app .table-container .table:not(.ekc-table--matrix),
+	#app-content.ekc-app .table-container .grid-table:not(.ekc-table--matrix),
+	#app-content.ekc-app .table-container .einkaufcheck-table:not(.ekc-table--matrix),
+	#app-content.ekc-app .table-responsive .table:not(.ekc-table--matrix),
+	#app-content.ekc-app .table-responsive .grid-table:not(.ekc-table--matrix),
+	#app-content.ekc-app .ekc-table-wrap .table:not(.ekc-table--matrix),
+	#app-content.ekc-app .ekc-table-wrap .grid-table:not(.ekc-table--matrix) {
+		width: 100%;
+		min-width: max-content;
+	}
+}
+
+#app-content.ekc-app .table thead th,
+#app-content.ekc-app .grid-table thead th,
+#app-content.ekc-app .ekc-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background-color: var(--einkaufcheck-color-table-header-background, var(--color-background-dark));
+	box-shadow: 0 1px 0 var(--einkaufcheck-color-table-border, var(--color-border));
+}
+
+#app-content.ekc-app .table tbody tr:focus-within,
+#app-content.ekc-app .grid-table tbody tr:focus-within {
+	outline: 2px solid var(--color-primary-element, #0082c9);
+	outline-offset: -2px;
+}
+
+#app-content.ekc-app .table td.ekc-table-empty,
+#app-content.ekc-app .table td.ekc-table-loading,
+#app-content.ekc-app .grid-table td.ekc-table-empty,
+#app-content.ekc-app .grid-table td.ekc-table-loading,
+#app-content.ekc-app .table td.text-center:not(:only-child),
+#app-content.ekc-app .grid-table td.text-center:not(:only-child) {
+	text-align: center;
+	color: var(--ekc-muted, var(--color-text-maxcontrast));
+	font-size: var(--ekc-fs-sm, 0.875rem);
+	padding: var(--ekc-space-5, 1.25rem) var(--ekc-space-4, 1rem);
+}
+
+#app-content.ekc-app .table td .ekc-empty-state,
+#app-content.ekc-app .grid-table td .ekc-empty-state {
+	padding: var(--ekc-space-5, 1.25rem) var(--ekc-space-3, 0.75rem);
+}
+
+#app-content.ekc-app .table .ekc-table-actions,
+#app-content.ekc-app .grid-table .ekc-table-actions,
+#app-content.ekc-app .table .admin-holidays__row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ekc-space-2, 0.5rem);
+	align-items: center;
+	justify-content: flex-end;
+}
+
+/* Actions column: never shrink below button labels (avoid width:1% clipping) */
+#app-content.ekc-app .table th.ekc-table-actions-col,
+#app-content.ekc-app .table th.actions-col,
+#app-content.ekc-app .table td.actions-cell,
+#app-content.ekc-app .table td.ekc-table-actions-col,
+#app-content.ekc-app .table td.admin-ot-audit__actions,
+#app-content.ekc-app .table td.admin-tariff-rules__row-actions,
+#app-content.ekc-app .table td.layer-card__history-actions,
+#app-content.ekc-app .grid-table th.ekc-table-actions-col,
+#app-content.ekc-app .grid-table td.actions-cell,
+#app-content.ekc-app .grid-table td.ekc-table-actions-col {
+	text-align: right;
+	vertical-align: middle;
+	white-space: nowrap;
+	width: auto;
+	min-width: max-content;
+	max-width: none;
+	overflow: visible;
+}
+
+#app-content.ekc-app .table td.actions-cell,
+#app-content.ekc-app .table td.ekc-table-actions-col,
+#app-content.ekc-app .table td.admin-ot-audit__actions,
+#app-content.ekc-app .table td.admin-tariff-rules__row-actions,
+#app-content.ekc-app .table td.layer-card__history-actions,
+#app-content.ekc-app .grid-table td.actions-cell,
+#app-content.ekc-app .grid-table td.ekc-table-actions-col {
+	display: table-cell;
+}
+
+#app-content.ekc-app .table td.ekc-table-actions-col .btn,
+#app-content.ekc-app .table td.actions-cell .btn,
+#app-content.ekc-app .table .ekc-table-actions .btn,
+#app-content.ekc-app .grid-table td.actions-cell .btn,
+#app-content.ekc-app .grid-table .ekc-table-actions .btn {
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+/* Truncated text columns — do not steal space from actions */
+#app-content.ekc-app .table td.description-cell,
+#app-content.ekc-app .table td.reason-cell {
+	max-width: min(20rem, 30vw);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#app-content.ekc-app .ekc-table-meta {
+	margin: var(--ekc-space-3, 0.75rem) 0 0;
+	font-size: var(--ekc-fs-sm, 0.875rem);
+	color: var(--ekc-muted, var(--color-text-maxcontrast));
+}
+
+/* Report preview + dynamic HTML tables */
+#app-content.ekc-app .report-preview-content .table-container,
+#app-content.ekc-app .report-preview-content .report-table {
+	margin-top: var(--ekc-space-3, 0.75rem);
+}
+
+#app-content.ekc-app .report-preview-content .report-table {
+	border-collapse: collapse;
+	font-size: var(--ekc-fs-sm, 0.875rem);
+}
+
+#app-content.ekc-app .report-preview-content .table-container .report-table {
+	margin-bottom: 0;
+}
+
+/* Notification matrices — not row lists; keep compact grid */
+#app-content.ekc-app .ekc-table--matrix {
+	font-size: var(--ekc-fs-sm, 0.875rem);
+}
+
+#app-content.ekc-app .ekc-table--matrix th,
+#app-content.ekc-app .ekc-table--matrix td {
+	text-align: center;
+	vertical-align: middle;
+	padding: var(--ekc-space-2, 0.5rem);
+}
+
+#app-content.ekc-app .ekc-table--matrix thead th {
+	position: static;
+	box-shadow: none;
+}
+
+/* Dense list / card-reflow tables — mobile base (<769). */
+
+	/* Dense list tables without card reflow: horizontal scroll */
+	#app-content.ekc-app .table-container .table:not(.ekc-table--matrix):not(.ekc-table--responsive),
+	#app-content.ekc-app .table-container .grid-table:not(.ekc-table--matrix):not(.ekc-table--responsive) {
+		min-width: 36rem;
+	}
+
+	#app-content.ekc-app .table .ekc-table-actions {
+		justify-content: flex-start;
+	}
+
+	/* Card reflow: every field + action reachable without sideways scrolling */
+	#app-content.ekc-app .table-container:has(.ekc-table--responsive),
+	#app-content.ekc-app .ekc-table-wrap:has(.ekc-table--responsive) {
+		overflow-x: visible;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive,
+	#app-content.ekc-app .table.ekc-table--responsive tbody,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive tbody,
+	#app-content.ekc-app .table.ekc-table--responsive tr,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive tr,
+	#app-content.ekc-app .table.ekc-table--responsive td,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive td {
+		display: block;
+		width: 100%;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive {
+		min-width: 0;
+		border-collapse: collapse;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive thead,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody tr {
+		margin-bottom: var(--ekc-space-4, 1rem);
+		padding: var(--ekc-space-3, 0.75rem) var(--ekc-space-4, 1rem);
+		border: 1px solid var(--ekc-border, var(--color-border));
+		border-radius: var(--ekc-radius-sm, 8px);
+		background: var(--ekc-bg-card, var(--color-main-background));
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody tr:last-child {
+		margin-bottom: 0;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: var(--ekc-space-4, 1rem);
+		padding: var(--ekc-space-2, 0.5rem) 0;
+		border-bottom: 1px solid var(--ekc-border, var(--color-border));
+		text-align: right;
+		max-width: none;
+		overflow: visible;
+		white-space: normal;
+		text-overflow: clip;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td:last-child {
+		border-bottom: none;
+		padding-bottom: 0;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td::before {
+		content: attr(data-label);
+		flex: 0 0 auto;
+		text-align: left;
+		font-weight: 600;
+		color: var(--ekc-muted, var(--color-text-maxcontrast));
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.description-cell,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.reason-cell,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.actions-cell,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.admin-ot-audit__actions,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.admin-tariff-rules__row-actions,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.layer-card__history-actions {
+		flex-direction: column;
+		align-items: stretch;
+		text-align: left;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.actions-cell .ekc-table-actions {
+		width: 100%;
+		justify-content: stretch;
+		flex-direction: column;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.actions-cell .ekc-table-actions .btn,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.actions-cell .btn,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.admin-ot-audit__actions .btn,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.admin-tariff-rules__row-actions .btn,
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.layer-card__history-actions .btn {
+		width: 100%;
+		justify-content: center;
+		min-height: 44px;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td.actions-cell .btn-icon {
+		width: 46px;
+		height: 46px;
+		min-width: 46px;
+		min-height: 46px;
+		align-self: flex-end;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td[colspan] {
+		display: block;
+		justify-content: center;
+		text-align: center;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td[colspan]::before {
+		content: none;
+	}
+
+
+/* 769px = NC tablet+: drop forced min-width / restore tabular --responsive layout. */
+@media (min-width: 769px) {
+	#app-content.ekc-app .table-container .table:not(.ekc-table--matrix):not(.ekc-table--responsive),
+	#app-content.ekc-app .table-container .grid-table:not(.ekc-table--matrix):not(.ekc-table--responsive) {
+		min-width: 0;
+	}
+
+	#app-content.ekc-app .table-container:has(.ekc-table--responsive),
+	#app-content.ekc-app .ekc-table-wrap:has(.ekc-table--responsive) {
+		overflow-x: auto;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive,
+	#app-content.ekc-app .table.ekc-table--responsive tbody,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive tbody {
+		display: table;
+		width: 100%;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tr,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive tr {
+		display: table-row;
+		width: auto;
+		margin: 0;
+		padding: 0;
+		border: none;
+		border-radius: 0;
+		background: transparent;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive td,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive td {
+		display: table-cell;
+		width: auto;
+		flex: unset;
+		justify-content: unset;
+		align-items: unset;
+		text-align: inherit;
+		border-bottom: none;
+		padding: var(--ekc-space-3);
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive thead,
+	#app-content.ekc-app .ekc-table.ekc-table--responsive thead {
+		position: static;
+		width: auto;
+		height: auto;
+		padding: unset;
+		margin: unset;
+		overflow: visible;
+		clip-path: none;
+		white-space: normal;
+		border: unset;
+	}
+
+	#app-content.ekc-app .table.ekc-table--responsive tbody td::before {
+		content: none;
+	}
+}
+
+
+@media (forced-colors: active) {
+	#app-content.ekc-app .table-container,
+	#app-content.ekc-app .table-responsive,
+	#app-content.ekc-app .ekc-table-wrap {
+		border-color: CanvasText;
+	}
+
+	#app-content.ekc-app .table--hover tbody tr:hover,
+	#app-content.ekc-app .grid-table.table--hover tbody tr:hover {
+		background: Highlight;
+		color: HighlightText;
+	}
+}

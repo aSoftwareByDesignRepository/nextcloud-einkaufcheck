@@ -1,0 +1,235 @@
+/* Auto-adapted from arbeitszeitcheck/css/common/tokens.css for EinkaufCheck shell parity. Do not invent divergent layout rules here. */
+/*
+ * EinkaufCheck design tokens (--ekc-*).
+ * Colors derive from Nextcloud theme variables; no raw hex in feature CSS
+ * except the intentional QR/label scan canvas (--ekc-qr-canvas).
+ * Spacing/typography on :root; theme colors on body + app surfaces
+ * (NC sets --color-* on body / [data-theme-*]).
+ */
+:root {
+	--ekc-space-1: 4px;
+	--ekc-space-2: 8px;
+	--ekc-space-3: 12px;
+	--ekc-space-4: 16px;
+	--ekc-space-5: 24px;
+	--ekc-space-6: 32px;
+	--ekc-space-7: 48px;
+	--ekc-space-8: 64px;
+
+	/* Design-system radius scale (sm/md/lg); pill aliases NC when available */
+	--ekc-radius-sm: 6px;
+	--ekc-radius-md: 12px;
+	--ekc-radius-lg: 16px;
+	--ekc-radius-pill: var(--border-radius-pill, 999px);
+
+	--ekc-fs-xs: 0.75rem;
+	--ekc-fs-sm: 0.875rem;
+	--ekc-fs-md: 1rem;
+	--ekc-fs-lg: 1.125rem;
+	--ekc-fs-xl: 1.5rem;
+	--ekc-fs-2xl: 1.875rem;
+
+	--ekc-line-tight: 1.2;
+	--ekc-line-base: 1.45;
+
+	--ekc-breakpoint-sm: 480px;
+	--ekc-breakpoint-md: 768px;
+	--ekc-breakpoint-lg: 1024px;
+
+	/* Inline SVG catalogue (IconCatalog / AzcCatalog) */
+	--ekc-icon-sm: 1rem;
+	--ekc-icon-md: 1.125rem;
+	--ekc-icon-lg: 1.375rem;
+	--ekc-icon-well: 2.25rem;
+	--ekc-icon-stroke: 2;
+
+	--ekc-tab-num: tabular-nums;
+	--ekc-touch: 44px;
+	--ekc-touch-lg: 48px;
+	--ekc-focus: 3px;
+
+	/*
+	 * QR / barcode canvas must stay light for scannability in every theme.
+	 * This is the only intentional non-theme surface in EinkaufCheck feature CSS.
+	 */
+	--ekc-qr-canvas: #ffffff;
+
+	/* Alias scale for shared common/* CSS ported from AZC (uses --space-*) */
+	--space-1: var(--ekc-space-1);
+	--space-2: var(--ekc-space-2);
+	--space-3: var(--ekc-space-3);
+	--space-4: var(--ekc-space-4);
+	--space-5: var(--ekc-space-5);
+	--space-6: var(--ekc-space-6);
+	--space-7: var(--ekc-space-7);
+	--space-8: var(--ekc-space-8);
+	--space-12: var(--ekc-space-7);
+}
+
+/*
+ * Theme-dependent tokens MUST resolve where Nextcloud sets --color-* (body /
+ * [data-theme-*]) and on themed app surfaces. Resolving color-mix only on
+ * :root can fall back to light surfaces while text inherits dark-theme ink.
+ */
+body,
+#app-content.ekc-app,
+.ekc-app,
+.ekc-dialog,
+.ekc-dialog-overlay,
+.ekc-toast-region,
+.modal-backdrop.ekc-dialog-overlay {
+	/* Fixed overlays (panels, backdrops, mobile nav) sit below NC #header, not under the profile menu */
+	--ekc-overlay-top: var(--header-height, 50px);
+	--ekc-overlay-height: calc(100dvh - var(--header-height, 50px));
+
+	--ekc-bg-soft: color-mix(in srgb, var(--color-main-background) 96%, var(--color-main-text) 4%);
+	--ekc-bg-card: var(--color-main-background);
+	--ekc-bg-stripe: color-mix(in srgb, var(--color-main-background) 92%, var(--color-main-text) 8%);
+	--ekc-text: var(--color-main-text);
+	--ekc-muted: var(--color-text-maxcontrast);
+	--ekc-border: color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ekc-border-strong: color-mix(in srgb, var(--color-main-text) 24%, transparent);
+
+	/* Mix with main background — not transparent — so callouts stay visible on all NC themes */
+	--ekc-tint-success: color-mix(in srgb, var(--color-success-text, var(--color-success)) 18%, var(--color-main-background));
+	--ekc-tint-warning: color-mix(in srgb, var(--color-warning-text, var(--color-warning)) 22%, var(--color-main-background));
+	--ekc-tint-danger: color-mix(in srgb, var(--color-error-text, var(--color-error)) 18%, var(--color-main-background));
+	--ekc-tint-info: color-mix(in srgb, var(--color-primary-element) 16%, var(--color-main-background));
+
+	/*
+	 * Notification icon wells — pale tint + semantic stroke (see .ekc-page-header__icon).
+	 * NC *-text tokens are tuned per theme for contrast on main-background.
+	 * Fallbacks omitted: Nextcloud always provides these on authenticated pages.
+	 */
+	--ekc-notif-fg-info: var(--color-primary-element);
+	--ekc-notif-fg-warning: var(--color-warning-text, var(--color-warning));
+	--ekc-notif-fg-success: var(--color-success-text, var(--color-success));
+	--ekc-notif-fg-danger: var(--color-error-text, var(--color-error));
+
+	--ekc-shadow-sm: 0 1px 2px color-mix(in srgb, var(--color-main-text) 8%, transparent);
+	--ekc-shadow-md: 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent);
+	--ekc-shadow-lg: 0 1rem 3rem color-mix(in srgb, var(--color-main-text) 28%, transparent);
+
+	/* Overlay scrims — theme ink, never hardcoded #000 */
+	--ekc-scrim: color-mix(in srgb, var(--color-main-text) 45%, transparent);
+	--ekc-scrim-strong: color-mix(in srgb, var(--color-main-text) 55%, transparent);
+	--ekc-press: color-mix(in srgb, var(--color-main-text) 15%, transparent);
+
+	/* Accent / primary aliases — track NC branding + custom accent colors */
+	--ekc-accent: var(--color-primary-element);
+	--ekc-primary: var(--color-primary-element);
+	--ekc-primary-text: var(--color-primary-element-text);
+
+	/*
+	 * Solid danger CTAs (DS checklist): use --color-element-error, never pale
+	 * --color-error tint + white text (fails AA on NC 30+).
+	 */
+	--ekc-danger-fill: var(--color-element-error, #c90000);
+	--ekc-danger-fill-hover: color-mix(in srgb, var(--color-element-error, #c90000) 82%, var(--color-main-text));
+	--ekc-danger-on-fill: var(--color-primary-element-text, #ffffff);
+	--ekc-danger-ink: var(--color-error-text, var(--color-element-error, #8a0000));
+	--ekc-danger-border: var(--color-border-error, var(--color-element-error, #c90000));
+
+	/*
+	 * Legacy --einkaufcheck-* aliases → Nextcloud / --ekc-* tokens.
+	 * Common CSS ported from older shells still references these names;
+	 * without aliases they resolve to nothing and break dark / HC themes.
+	 */
+	--einkaufcheck-color-primary: var(--color-primary-element);
+	--einkaufcheck-color-primary-element: var(--color-primary-element);
+	--einkaufcheck-color-primary-light: var(--ekc-tint-info);
+	--einkaufcheck-color-border-focus: var(--color-primary-element);
+	--einkaufcheck-color-text: var(--color-main-text);
+	--einkaufcheck-color-text-maxcontrast: var(--color-text-maxcontrast);
+	--einkaufcheck-color-text-muted: var(--color-text-maxcontrast);
+	--einkaufcheck-color-text-secondary: var(--color-text-maxcontrast);
+	--einkaufcheck-color-text-tertiary: var(--color-text-maxcontrast);
+	--einkaufcheck-color-border: var(--ekc-border, var(--color-border));
+	--einkaufcheck-color-background: var(--color-main-background);
+	--einkaufcheck-color-background-secondary: var(--ekc-bg-soft, var(--color-background-dark));
+	--einkaufcheck-color-background-tertiary: var(--color-background-hover, var(--ekc-bg-soft));
+	--einkaufcheck-color-background-elevated: var(--ekc-bg-card, var(--color-main-background));
+	--einkaufcheck-color-modal-background: var(--ekc-bg-card, var(--color-main-background));
+	--einkaufcheck-color-modal-border: var(--ekc-border, var(--color-border));
+	--einkaufcheck-color-modal-footer-background: var(--ekc-bg-soft, var(--color-background-dark));
+	--einkaufcheck-color-form-background: var(--color-main-background);
+	--einkaufcheck-color-form-border: var(--ekc-border, var(--color-border));
+	--einkaufcheck-color-form-border-focus: var(--color-primary-element);
+	--einkaufcheck-color-form-border-error: var(--ekc-danger-border, var(--color-error-text, var(--color-error)));
+	--einkaufcheck-color-form-border-success: var(--color-success-text, var(--color-success));
+	--einkaufcheck-color-form-label: var(--color-main-text);
+	--einkaufcheck-color-form-required: var(--ekc-danger-ink, var(--color-error-text, var(--color-error)));
+	--einkaufcheck-color-error: var(--ekc-danger-ink, var(--color-error-text, var(--color-error)));
+	--einkaufcheck-color-error-light: var(--ekc-tint-danger);
+	--einkaufcheck-color-success-light: var(--ekc-tint-success);
+	--einkaufcheck-color-warning-light: var(--ekc-tint-warning);
+	--einkaufcheck-color-border-warning: var(--color-warning-text, var(--color-warning));
+	--einkaufcheck-color-table-header-background: var(--color-background-dark, var(--ekc-bg-soft));
+	--einkaufcheck-color-table-border: var(--ekc-border, var(--color-border));
+
+	--einkaufcheck-font-family-sans: inherit;
+	--einkaufcheck-font-size-sm: var(--ekc-fs-sm);
+	--einkaufcheck-font-size-base: var(--ekc-fs-md);
+	--einkaufcheck-font-size-lg: var(--ekc-fs-lg);
+	--einkaufcheck-font-size-xl: var(--ekc-fs-xl);
+	--einkaufcheck-font-size-3xl: var(--ekc-fs-2xl);
+	--einkaufcheck-font-weight-medium: 500;
+	--einkaufcheck-font-weight-semibold: 600;
+	--einkaufcheck-font-weight-bold: 700;
+	--einkaufcheck-line-height-tight: var(--ekc-line-tight);
+	--einkaufcheck-line-height-normal: var(--ekc-line-base);
+	--einkaufcheck-line-height-relaxed: 1.6;
+	--einkaufcheck-letter-spacing-tight: -0.01em;
+
+	--radius-base: var(--ekc-radius-sm);
+}
+
+/*
+ * Dark themes: NC --color-element-error is a bright accent — darken fill for AA.
+ * primary-element-text is often black (for light CTAs) and fails on medium red —
+ * use main-text ink like ArbeitszeitCheck.
+ */
+body[data-theme-dark],
+body[data-theme-dark-highcontrast],
+[data-theme-dark] #app-content.ekc-app,
+[data-theme-dark-highcontrast] #app-content.ekc-app {
+	--ekc-danger-fill: color-mix(in srgb, var(--color-element-error, #ff5050) 40%, var(--color-main-background));
+	--ekc-danger-fill-hover: color-mix(in srgb, var(--color-element-error, #ff5050) 52%, var(--color-main-background));
+	--ekc-danger-on-fill: var(--color-main-text);
+	--ekc-danger-border: var(--color-element-error, #ff5050);
+}
+
+/*
+ * High-contrast NC themes + OS prefers-contrast: stronger borders, hairline shadows
+ * (colour alone must never carry structure — WCAG 1.4.1 / DS principle 3).
+ */
+body[data-theme-light-highcontrast],
+body[data-theme-dark-highcontrast],
+[data-theme-light-highcontrast] #app-content.ekc-app,
+[data-theme-dark-highcontrast] #app-content.ekc-app {
+	--ekc-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
+	--ekc-border-strong: color-mix(in srgb, var(--color-main-text) 40%, transparent);
+	--ekc-shadow-sm: 0 0 0 1px var(--ekc-border-strong);
+	--ekc-shadow-md: 0 0 0 1px var(--ekc-border-strong);
+	--ekc-shadow-lg: 0 0 0 2px var(--ekc-border-strong);
+}
+
+@media (prefers-contrast: more) {
+	:root {
+		--ekc-icon-stroke: 2.25;
+	}
+
+	body,
+	#app-content.ekc-app,
+	.ekc-app,
+	.ekc-dialog,
+	.ekc-dialog-overlay,
+	.ekc-toast-region,
+	.modal-backdrop.ekc-dialog-overlay {
+		--ekc-border: color-mix(in srgb, var(--color-main-text) 28%, transparent);
+		--ekc-border-strong: color-mix(in srgb, var(--color-main-text) 40%, transparent);
+		--ekc-shadow-sm: 0 0 0 1px var(--ekc-border-strong);
+		--ekc-shadow-md: 0 0 0 1px var(--ekc-border-strong);
+		--ekc-shadow-lg: 0 0 0 2px var(--ekc-border-strong);
+	}
+}

@@ -1,0 +1,579 @@
+/* Adapted from arbeitszeitcheck notification-surfaces.css (iv- prefix). */
+/**
+ * Notifications: callouts, alerts, toasts, inline-notice — theme-safe (WCAG 2.1 AA).
+ * Uses NC --color-*-text / *-rgb for contrast on light, dark, and custom themes.
+ * Icon wells: semantic fill + contrasting glyph (not low-contrast outline-only).
+ */
+
+/* ── Panel accents (visible border + tint on light, dark, custom NC themes) ── */
+#app-content.ekc-app .ekc-callout--info:not(.ekc-semantic-panel),
+.ekc-nc-admin-settings .ekc-callout--info,
+.modal-backdrop .ekc-callout--info:not(.ekc-semantic-panel),
+#app-content.ekc-app .inline-notice--info,
+.modal-backdrop .inline-notice--info,
+.toast--info {
+	border-color: var(--color-primary-element, #00679e);
+	border-left-width: 5px;
+	border-left-color: var(--color-primary-element, #00679e);
+	background: var(--ekc-tint-info);
+}
+
+#app-content.ekc-app .ekc-callout--warning:not(.ekc-semantic-panel),
+.ekc-nc-admin-settings .ekc-callout--warning,
+.modal-backdrop .ekc-callout--warning:not(.ekc-semantic-panel),
+#app-content.ekc-app .inline-notice--warning,
+.modal-backdrop .inline-notice--warning,
+.toast--warning,
+#app-content.ekc-app .alert--warning,
+.modal-backdrop .alert--warning {
+	border-color: var(--color-warning-text, var(--color-warning, #a37200));
+	border-left-width: 5px;
+	border-left-color: var(--color-warning-text, var(--color-warning, #a37200));
+	background: var(--ekc-tint-warning);
+}
+
+#app-content.ekc-app .ekc-callout--success:not(.ekc-semantic-panel),
+.ekc-nc-admin-settings .ekc-callout--success,
+.modal-backdrop .ekc-callout--success:not(.ekc-semantic-panel),
+.toast--success,
+#app-content.ekc-app .alert--success,
+.modal-backdrop .alert--success {
+	border-color: var(--color-success-text, var(--color-success, #2d7b46));
+	border-left-width: 5px;
+	border-left-color: var(--color-success-text, var(--color-success, #2d7b46));
+	background: var(--ekc-tint-success);
+}
+
+#app-content.ekc-app .ekc-callout--danger:not(.ekc-semantic-panel),
+#app-content.ekc-app .ekc-callout--error:not(.ekc-semantic-panel),
+.ekc-nc-admin-settings .ekc-callout--danger,
+.ekc-nc-admin-settings .ekc-callout--error,
+.modal-backdrop .ekc-callout--danger:not(.ekc-semantic-panel),
+.modal-backdrop .ekc-callout--error:not(.ekc-semantic-panel),
+.toast--error,
+#app-content.ekc-app .alert--error,
+.modal-backdrop .alert--error {
+	border-color: var(--color-error-text, var(--color-error, #db0606));
+	border-left-width: 5px;
+	border-left-color: var(--color-error-text, var(--color-error, #db0606));
+	background: var(--ekc-tint-danger);
+}
+
+#app-content.ekc-app .ekc-callout--neutral:not(.ekc-semantic-panel),
+.modal-backdrop .ekc-callout--neutral:not(.ekc-semantic-panel) {
+	border-color: var(--color-border);
+	border-left-width: 2px;
+	background: color-mix(in srgb, var(--color-main-text) 5%, var(--color-main-background));
+}
+
+/* Semantic panel panel tints: common/semantic-surfaces.css */
+
+/* ── Icon wells: pale tint + semantic stroke (same model as .ekc-page-header__icon) ── */
+.ekc-notif-icon-well,
+#app-content.ekc-app .ekc-callout__icon,
+.modal-backdrop .ekc-callout__icon,
+#app-content.ekc-app .alert-icon,
+.modal-backdrop .alert-icon,
+.toast-icon,
+#app-content.ekc-app .inline-notice__icon,
+.modal-backdrop .inline-notice__icon,
+.ekc-status-icon-well {
+	flex-shrink: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: var(--ekc-icon-well, 2.25rem);
+	height: var(--ekc-icon-well, 2.25rem);
+	min-width: var(--ekc-icon-well, 2.25rem);
+	min-height: var(--ekc-icon-well, 2.25rem);
+	border-radius: var(--ekc-radius-sm, 6px);
+	border: 2px solid var(--color-border);
+	background: var(--color-main-background);
+	color: var(--color-main-text);
+	box-shadow: none;
+}
+
+.ekc-notif-icon-well .ekc-icon,
+.ekc-notif-icon-well .ekc-callout__icon-svg,
+.ekc-notif-icon-well svg,
+#app-content.ekc-app .ekc-callout__icon .ekc-icon,
+#app-content.ekc-app .ekc-callout__icon .ekc-callout__icon-svg,
+#app-content.ekc-app .ekc-callout__icon-svg,
+.modal-backdrop .ekc-callout__icon .ekc-icon,
+.modal-backdrop .ekc-callout__icon .ekc-callout__icon-svg,
+.modal-backdrop .ekc-callout__icon-svg,
+.alert-icon .ekc-icon,
+.alert-icon svg,
+.toast-icon .ekc-icon,
+.toast-icon svg,
+.toast-icon .toast__icon-svg,
+#app-content.ekc-app .inline-notice__icon .ekc-icon,
+#app-content.ekc-app .inline-notice__icon .inline-notice__glyph,
+#app-content.ekc-app .inline-notice__icon svg,
+.modal-backdrop .inline-notice__icon svg {
+	width: var(--ekc-icon-lg, 1.375rem);
+	height: var(--ekc-icon-lg, 1.375rem);
+	min-width: var(--ekc-icon-lg, 1.375rem);
+	min-height: var(--ekc-icon-lg, 1.375rem);
+	color: inherit;
+	stroke: currentColor;
+	fill: none;
+	opacity: 1;
+}
+
+/* Filled accent dots in IconCatalog (info / alert) */
+.ekc-notif-icon-well svg circle[fill='currentColor'],
+.ekc-notif-icon-well svg [fill='currentColor'],
+#app-content.ekc-app .ekc-callout__icon svg circle[fill='currentColor'],
+#app-content.ekc-app .ekc-callout__icon svg [fill='currentColor'],
+.toast-icon svg circle[fill='currentColor'],
+.toast-icon svg [fill='currentColor'] {
+	fill: currentColor;
+	stroke: none;
+}
+
+/* Variant wells — modifier class + legacy parent selectors */
+.ekc-notif-icon-well--info,
+.ekc-callout.ekc-callout--info > .ekc-callout__icon,
+.ekc-callout.ekc-callout--info > .ekc-notif-icon-well,
+#app-content.ekc-app .ekc-semantic-panel--info .ekc-callout__icon,
+.ekc-nc-admin-settings .ekc-callout--info .ekc-callout__icon,
+.modal-backdrop .ekc-callout--info .ekc-callout__icon,
+#app-content.ekc-app .alert--info .alert-icon,
+.modal-backdrop .alert--info .alert-icon,
+#app-content.ekc-app .inline-notice--info .inline-notice__icon,
+.modal-backdrop .inline-notice--info .inline-notice__icon,
+.toast--info .toast-icon {
+	background: var(--ekc-tint-info);
+	border-color: var(--ekc-notif-fg-info);
+	color: var(--ekc-notif-fg-info);
+}
+
+.ekc-notif-icon-well--warning,
+.ekc-callout.ekc-callout--warning > .ekc-callout__icon,
+.ekc-callout.ekc-callout--warning > .ekc-notif-icon-well,
+#app-content.ekc-app .ekc-semantic-panel--warning .ekc-callout__icon,
+.ekc-nc-admin-settings .ekc-callout--warning .ekc-callout__icon,
+.modal-backdrop .ekc-callout--warning .ekc-callout__icon,
+#app-content.ekc-app .alert--warning .alert-icon,
+.modal-backdrop .alert--warning .alert-icon,
+#app-content.ekc-app .inline-notice--warning .inline-notice__icon,
+.modal-backdrop .inline-notice--warning .inline-notice__icon,
+.toast--warning .toast-icon {
+	background: var(--ekc-tint-warning);
+	border-color: var(--ekc-notif-fg-warning);
+	color: var(--ekc-notif-fg-warning);
+}
+
+.ekc-notif-icon-well--success,
+.ekc-callout.ekc-callout--success > .ekc-callout__icon,
+.ekc-callout.ekc-callout--success > .ekc-notif-icon-well,
+#app-content.ekc-app .ekc-semantic-panel--success .ekc-callout__icon,
+.modal-backdrop .ekc-callout--success .ekc-callout__icon,
+#app-content.ekc-app .alert--success .alert-icon,
+.modal-backdrop .alert--success .alert-icon,
+.toast--success .toast-icon {
+	background: var(--ekc-tint-success);
+	border-color: var(--ekc-notif-fg-success);
+	color: var(--ekc-notif-fg-success);
+}
+
+.ekc-notif-icon-well--danger,
+.ekc-notif-icon-well--error,
+.ekc-callout.ekc-callout--danger > .ekc-callout__icon,
+.ekc-callout.ekc-callout--danger > .ekc-notif-icon-well,
+.ekc-callout.ekc-callout--error > .ekc-callout__icon,
+.ekc-callout.ekc-callout--error > .ekc-notif-icon-well,
+.ekc-nc-admin-settings .ekc-callout--danger .ekc-callout__icon,
+.ekc-nc-admin-settings .ekc-callout--error .ekc-callout__icon,
+.modal-backdrop .ekc-callout--danger .ekc-callout__icon,
+.modal-backdrop .ekc-callout--error .ekc-callout__icon,
+#app-content.ekc-app .alert--error .alert-icon,
+.modal-backdrop .alert--error .alert-icon,
+.toast--error .toast-icon {
+	background: var(--ekc-tint-danger);
+	border-color: var(--ekc-notif-fg-danger);
+	color: var(--ekc-notif-fg-danger);
+}
+
+.ekc-notif-icon-well--neutral,
+.ekc-callout.ekc-callout--neutral > .ekc-callout__icon,
+.ekc-callout.ekc-callout--neutral > .ekc-notif-icon-well,
+.modal-backdrop .ekc-callout--neutral .ekc-callout__icon {
+	background: color-mix(in srgb, var(--color-main-text) 8%, var(--color-main-background));
+	border-color: var(--color-border-maxcontrast, var(--color-border));
+	color: var(--color-main-text);
+}
+
+#app-content.ekc-app .ekc-semantic-panel--success.ekc-callout.auto-break-panel--disabled .ekc-callout__icon {
+	background: color-mix(in srgb, var(--color-main-text) 10%, var(--color-main-background));
+	border-color: var(--color-border);
+	color: var(--color-main-text);
+}
+
+/* Body copy: main text only (AA); hints stay maxcontrast */
+#app-content.ekc-app .ekc-callout__title,
+.modal-backdrop .ekc-callout__title,
+#app-content.ekc-app .ekc-callout__text,
+.modal-backdrop .ekc-callout__text,
+#app-content.ekc-app .alert-message,
+.modal-backdrop .alert-message,
+.toast-title,
+.toast-message,
+#app-content.ekc-app .inline-notice__title,
+.modal-backdrop .inline-notice__title,
+#app-content.ekc-app .inline-notice__text,
+.modal-backdrop .inline-notice__text {
+	color: var(--color-main-text);
+}
+
+/* Hints inside tinted callouts must keep main-text ink (WCAG 1.4.3 on tint). */
+#app-content.ekc-app .ekc-callout .ekc-field__hint,
+#app-content.ekc-app .ekc-callout .ekc-tip__text,
+#app-content.ekc-app .ekc-callout .ekc-muted,
+.modal-backdrop .ekc-callout .ekc-field__hint {
+	color: var(--color-main-text);
+}
+
+/* Callouts — wrap icon+body on narrow screens; 721px restores single-row desktop. */
+#app-content.ekc-app .ekc-callout,
+.modal-backdrop .ekc-callout,
+#app-content.ekc-app .alert,
+.modal-backdrop .alert,
+#app-content.ekc-app .inline-notice,
+.modal-backdrop .inline-notice,
+.toast {
+	flex-wrap: wrap;
+}
+
+#app-content.ekc-app .ekc-callout__icon,
+.modal-backdrop .ekc-callout__icon,
+.toast-icon,
+#app-content.ekc-app .alert-icon,
+.modal-backdrop .alert-icon,
+#app-content.ekc-app .inline-notice__icon,
+.modal-backdrop .inline-notice__icon {
+	margin-bottom: var(--ekc-space-1, 0.25rem);
+}
+
+/* 721px ≈ prior max-width 720 inversion: icon sits inline again. */
+@media (min-width: 721px) {
+	#app-content.ekc-app .ekc-callout,
+	.modal-backdrop .ekc-callout,
+	#app-content.ekc-app .alert,
+	.modal-backdrop .alert,
+	#app-content.ekc-app .inline-notice,
+	.modal-backdrop .inline-notice,
+	.toast {
+		flex-wrap: nowrap;
+	}
+
+	#app-content.ekc-app .ekc-callout__icon,
+	.modal-backdrop .ekc-callout__icon,
+	.toast-icon,
+	#app-content.ekc-app .alert-icon,
+	.modal-backdrop .alert-icon,
+	#app-content.ekc-app .inline-notice__icon,
+	.modal-backdrop .inline-notice__icon {
+		margin-bottom: 0;
+	}
+}
+
+@media (prefers-contrast: more) {
+	#app-content.ekc-app .ekc-callout:not(.ekc-semantic-panel),
+	.modal-backdrop .ekc-callout:not(.ekc-semantic-panel),
+	.toast,
+	#app-content.ekc-app .alert,
+	.modal-backdrop .alert {
+		border-width: 3px;
+	}
+
+	#app-content.ekc-app .ekc-callout__icon,
+	.modal-backdrop .ekc-callout__icon,
+	.toast-icon,
+	#app-content.ekc-app .alert-icon,
+	.modal-backdrop .alert-icon {
+		border-width: 3px;
+	}
+
+	.ekc-notif-icon-well .ekc-icon,
+	.ekc-notif-icon-well svg,
+	#app-content.ekc-app .ekc-callout__icon .ekc-icon,
+	#app-content.ekc-app .ekc-callout__icon svg {
+		stroke-width: 3;
+	}
+}
+
+/* ── Legacy inline-notice (backward compat) ───────────────── */
+#app-content.ekc-app .inline-notice-section,
+.modal-backdrop .inline-notice-section {
+	padding: 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	margin-bottom: var(--ekc-space-4, 1rem);
+}
+
+#app-content.ekc-app .inline-notice,
+.modal-backdrop .inline-notice {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: var(--ekc-space-3, 0.75rem) var(--ekc-space-4, 1rem);
+	padding: var(--ekc-space-4, 1rem) var(--ekc-space-5, 1.25rem);
+	border: 2px solid var(--color-border, var(--ekc-border));
+	border-radius: var(--ekc-radius-md, 8px);
+	background: var(--color-main-background, var(--ekc-bg));
+	box-shadow: var(--ekc-shadow-sm);
+	color: var(--color-main-text, var(--ekc-text));
+}
+
+#app-content.ekc-app .inline-notice__content,
+.modal-backdrop .inline-notice__content {
+	flex: 1 1 12rem;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-2, 0.5rem);
+}
+
+#app-content.ekc-app .inline-notice__title,
+.modal-backdrop .inline-notice__title {
+	margin: 0;
+	font-size: var(--ekc-fs-lg, 1.125rem);
+	font-weight: 600;
+	line-height: var(--ekc-line-tight, 1.25);
+	color: var(--color-main-text, var(--ekc-text));
+}
+
+#app-content.ekc-app .inline-notice__text,
+.modal-backdrop .inline-notice__text {
+	margin: 0;
+	font-size: var(--ekc-fs-md, 1rem);
+	line-height: var(--ekc-line-base, 1.45);
+	max-width: 65ch;
+	color: var(--color-main-text, var(--ekc-text));
+}
+
+#app-content.ekc-app .inline-notice__actions,
+.modal-backdrop .inline-notice__actions {
+	flex-shrink: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ekc-space-2, 0.5rem);
+	margin: 0;
+}
+
+#app-content.ekc-app .inline-notice__actions .ekc-btn,
+#app-content.ekc-app .inline-notice__actions .btn,
+.modal-backdrop .inline-notice__actions .ekc-btn,
+.modal-backdrop .inline-notice__actions .btn {
+	min-height: 44px;
+	white-space: nowrap;
+}
+
+/* Inline notices — stack on narrow; 42.0625rem restores row (prior >42rem). */
+#app-content.ekc-app .inline-notice,
+.modal-backdrop .inline-notice {
+	flex-direction: column;
+}
+
+#app-content.ekc-app .inline-notice__actions,
+.modal-backdrop .inline-notice__actions {
+	width: 100%;
+}
+
+#app-content.ekc-app .inline-notice__actions .ekc-btn,
+#app-content.ekc-app .inline-notice__actions .btn,
+.modal-backdrop .inline-notice__actions .ekc-btn,
+.modal-backdrop .inline-notice__actions .btn {
+	flex: 1 1 auto;
+	justify-content: center;
+}
+
+@media (min-width: 42.0625rem) {
+	#app-content.ekc-app .inline-notice,
+	.modal-backdrop .inline-notice {
+		flex-direction: row;
+	}
+
+	#app-content.ekc-app .inline-notice__actions,
+	.modal-backdrop .inline-notice__actions {
+		width: auto;
+	}
+
+	#app-content.ekc-app .inline-notice__actions .ekc-btn,
+	#app-content.ekc-app .inline-notice__actions .btn,
+	.modal-backdrop .inline-notice__actions .ekc-btn,
+	.modal-backdrop .inline-notice__actions .btn {
+		flex: 0 1 auto;
+	}
+}
+
+/* ── Toast container (MC parity: bottom-right) ───────────────── */
+.toast-container {
+	position: fixed;
+	bottom: calc(var(--ekc-space-5, 1.5rem) + env(safe-area-inset-bottom, 0px));
+	right: calc(var(--ekc-space-5, 1.5rem) + env(safe-area-inset-right, 0px));
+	top: auto;
+	z-index: var(--z-toast, 10000);
+	display: flex;
+	flex-direction: column-reverse;
+	gap: var(--ekc-space-2, 0.5rem);
+	max-width: min(24rem, calc(100vw - 2rem));
+}
+
+/* ── Toast card (left accent, MC weight) ───────────────────── */
+.toast {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: var(--ekc-space-3, 0.75rem);
+	padding: var(--ekc-space-3, 0.75rem) var(--ekc-space-4, 1rem);
+	border: 1px solid var(--ekc-border, var(--color-border));
+	border-left-width: 4px;
+	border-radius: var(--ekc-radius-md, 12px);
+	background: var(--ekc-bg-card, var(--color-main-background));
+	box-shadow: var(--ekc-shadow-md, 0 8px 24px color-mix(in srgb, var(--color-main-text) 12%, transparent));
+	color: var(--color-main-text, var(--ekc-text));
+	font-weight: 600;
+	max-width: 100%;
+	opacity: 0;
+	transform: translateY(0.75rem);
+	transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast--show {
+	opacity: 1;
+	transform: translateY(0);
+}
+
+@keyframes toast-slide-in {
+	from {
+		transform: translateY(0.75rem);
+		opacity: 0;
+	}
+
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.toast--removing {
+	animation: toast-slide-out 0.3s ease-in forwards;
+}
+
+@keyframes toast-slide-out {
+	from {
+		transform: translateY(0);
+		opacity: 1;
+	}
+
+	to {
+		transform: translateY(0.75rem);
+		opacity: 0;
+	}
+}
+
+.toast-content {
+	flex: 1 1 auto;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-1, 0.25rem);
+}
+
+.toast-title {
+	margin: 0;
+	font-size: var(--ekc-fs-md, 1rem);
+	font-weight: 600;
+	line-height: var(--ekc-line-tight, 1.25);
+	color: var(--color-main-text, var(--ekc-text));
+}
+
+.toast-message {
+	margin: 0;
+	font-size: var(--ekc-fs-md, 1rem);
+	line-height: var(--ekc-line-base, 1.45);
+	color: var(--color-main-text, var(--ekc-text));
+	max-width: 65ch;
+}
+
+.toast-close {
+	background: none;
+	border: none;
+	font-size: var(--ekc-fs-lg, 1.25rem);
+	line-height: 1;
+	color: var(--color-main-text, var(--ekc-text));
+	cursor: pointer;
+	padding: var(--ekc-space-1, 0.25rem);
+	border-radius: var(--ekc-radius-sm, 6px);
+	opacity: 0.85;
+	flex-shrink: 0;
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.toast-close:hover,
+.toast-close:focus-visible {
+	opacity: 1;
+	outline: 2px solid var(--color-primary-element, #00679e);
+	outline-offset: 2px;
+}
+
+/* Toast tray — full-bleed on narrow; corner dock from 42.0625rem (desktop-identical). */
+.toast-container {
+	left: calc(var(--ekc-space-4, 1rem) + env(safe-area-inset-left, 0px));
+	right: calc(var(--ekc-space-4, 1rem) + env(safe-area-inset-right, 0px));
+	bottom: calc(var(--ekc-space-4, 1rem) + env(safe-area-inset-bottom, 0px));
+	max-width: none;
+}
+
+@media (min-width: 42.0625rem) {
+	.toast-container {
+		left: auto;
+		right: calc(var(--ekc-space-5, 1.5rem) + env(safe-area-inset-right, 0px));
+		bottom: calc(var(--ekc-space-5, 1.5rem) + env(safe-area-inset-bottom, 0px));
+		max-width: min(24rem, calc(100vw - 2rem));
+	}
+}
+
+@media (forced-colors: active) {
+	#app-content.ekc-app .ekc-callout,
+	.modal-backdrop .ekc-callout,
+	#app-content.ekc-app .alert,
+	.modal-backdrop .alert,
+	.toast,
+	#app-content.ekc-app .inline-notice,
+	.modal-backdrop .inline-notice {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	#app-content.ekc-app .ekc-callout__icon,
+	.modal-backdrop .ekc-callout__icon,
+	.toast-icon,
+	#app-content.ekc-app .alert-icon,
+	.modal-backdrop .alert-icon,
+	#app-content.ekc-app .inline-notice__icon,
+	.modal-backdrop .inline-notice__icon {
+		border: 2px solid CanvasText;
+		background: Canvas;
+		color: CanvasText;
+		box-shadow: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.toast,
+	.toast--removing {
+		animation: none !important;
+		transition: none !important;
+	}
+}

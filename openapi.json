@@ -1,0 +1,341 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "EinkaufCheck HTTP API",
+    "version": "1.4.9",
+    "description": "Session-authenticated JSON API. Nextcloud AppFramework CSRF (requesttoken header, or requesttoken in GET/POST) is required on every session call including GET — not only on POST/PUT/DELETE. OCS-APIRequest may be used for app-password clients. GET /api/offers is cache-only and never saves PLZ/week. POST /api/offers/refresh fetches live store lists and persists the requested PLZ/week. Offer payloads include unit_price/unit_kind (kg, l, or piece) when known or calculable, and week_tip when the other week’s cache is present (never live-fetched on GET). GET /api/trends reads price history (no live fetch, no preference write) and never returns offers_stale. PUT /api/settings accepts optional show_images; omitting the key leaves the pictures toggle unchanged."
+  },
+  "servers": [
+    {
+      "url": "/apps/einkaufcheck",
+      "description": "Nextcloud app base"
+    }
+  ],
+  "paths": {
+    "/api/offers": {
+      "get": {
+        "operationId": "getOffers",
+        "summary": "Read cached offers for a PLZ and week (no live fetch, no preference write)",
+        "parameters": [
+          { "name": "plz", "in": "query", "schema": { "type": "string", "pattern": "^[0-9]{5}$" } },
+          { "name": "week", "in": "query", "schema": { "type": "string", "enum": ["current", "next"] } }
+        ],
+        "responses": {
+          "200": { "description": "Cached offer payload plus watch_hits, unit_price/unit_kind, week_tip, and week_compare (other week peeked from cache only)" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "409": { "description": "offers_stale — cache empty; client must POST /api/offers/refresh" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/offers/refresh": {
+      "post": {
+        "operationId": "refreshOffers",
+        "summary": "Live-fetch offers and save the requested PLZ/week",
+        "parameters": [
+          { "name": "plz", "in": "query", "schema": { "type": "string", "pattern": "^[0-9]{5}$" } },
+          { "name": "week", "in": "query", "schema": { "type": "string", "enum": ["current", "next"] } }
+        ],
+        "responses": {
+          "200": { "description": "Fresh offer payload plus watch_hits" },
+          "400": { "description": "Invalid PLZ/week" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" },
+          "502": { "description": "Live fetch failed or busy" }
+        }
+      }
+    },
+    "/api/stores-status": {
+      "get": {
+        "operationId": "storesStatus",
+        "summary": "Which retailer feeds are available vs blocked",
+        "responses": {
+          "200": { "description": "Store status map" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/settings": {
+      "get": {
+        "operationId": "getSettings",
+        "summary": "Current user PLZ, default week, and pictures toggle",
+        "responses": {
+          "200": { "description": "{ plz, week, show_images }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "put": {
+        "operationId": "saveSettings",
+        "summary": "Save user PLZ and default week; show_images is optional and omitted means unchanged",
+        "responses": {
+          "200": { "description": "Saved prefs" },
+          "400": { "description": "Invalid PLZ/week" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/list": {
+      "get": {
+        "operationId": "listGet",
+        "summary": "Shopping list for the current user",
+        "responses": {
+          "200": { "description": "{ items }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "post": {
+        "operationId": "listAdd",
+        "summary": "Add an offer to the shopping list (merges qty on the same unchecked line)",
+        "responses": {
+          "201": { "description": "Created or merged item" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "409": { "description": "list_busy or list_full" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "listClear",
+        "summary": "Empty the shopping list (optionally one store)",
+        "parameters": [
+          {
+            "name": "store",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["", "all", "ALDI Nord", "Lidl"] },
+            "description": "If set, delete only that store. Empty or all clears both."
+          }
+        ],
+        "responses": {
+          "200": { "description": "{ ok: true }" },
+          "400": { "description": "Invalid store" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "409": { "description": "list_busy" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/list/{id}": {
+      "put": {
+        "operationId": "listUpdate",
+        "summary": "Update qty/checked/note for an owned list row",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Updated item" },
+          "400": { "description": "Validation (including invalid_bool)" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "404": { "description": "Not found or not owned" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "listDelete",
+        "summary": "Delete an owned list row",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ ok: true }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "404": { "description": "Not found or not owned" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/list/export": {
+      "get": {
+        "operationId": "listExport",
+        "summary": "Plain text, WhatsApp URL, and CSV of the current list",
+        "parameters": [
+          {
+            "name": "store",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["", "all", "ALDI Nord", "Lidl"] },
+            "description": "If set, export only that store. Empty or all exports both."
+          }
+        ],
+        "responses": {
+          "200": { "description": "{ text, whatsapp_url, csv, items }" },
+          "400": { "description": "Invalid store" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/watch": {
+      "get": {
+        "operationId": "watchGet",
+        "summary": "Staple watches for the current user",
+        "responses": {
+          "200": { "description": "{ items }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "post": {
+        "operationId": "watchAdd",
+        "summary": "Watch a staple (query 3–200 characters)",
+        "responses": {
+          "201": { "description": "Created watch" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "409": { "description": "watch_busy or watch_full" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/watch/{id}": {
+      "put": {
+        "operationId": "watchUpdate",
+        "summary": "Update an owned watch (enabled/query/caps/store)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Updated watch" },
+          "400": { "description": "Validation (including invalid_bool)" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "404": { "description": "Not found or not owned" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "watchDelete",
+        "summary": "Delete an owned watch",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ ok: true }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "404": { "description": "Not found or not owned" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/watch/hits": {
+      "get": {
+        "operationId": "watchHits",
+        "summary": "Current watch hits against the cached offer list (no live fetch)",
+        "parameters": [
+          { "name": "plz", "in": "query", "schema": { "type": "string", "pattern": "^[0-9]{5}$" } },
+          { "name": "week", "in": "query", "schema": { "type": "string", "enum": ["current", "next"] } }
+        ],
+        "responses": {
+          "200": { "description": "{ hits }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "409": { "description": "offers_stale" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/trends": {
+      "get": {
+        "operationId": "getTrends",
+        "summary": "Price trends for a PLZ and week (no live fetch, no preference write). Empty cache is 200, never offers_stale.",
+        "parameters": [
+          { "name": "plz", "in": "query", "schema": { "type": "string", "pattern": "^[0-9]{5}$" } },
+          { "name": "week", "in": "query", "schema": { "type": "string", "enum": ["current", "next"] } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "minLength": 3, "maxLength": 200 } },
+          { "name": "store", "in": "query", "schema": { "type": "string", "enum": ["", "all", "ALDI Nord", "Lidl"] } }
+        ],
+        "responses": {
+          "200": { "description": "{ staples, cheap_now, search, weeks_tracked, cache }. Search matching uses word-bounded WatchMatchService, never SQL LIKE infix." },
+          "400": { "description": "Invalid PLZ/week/query/store" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/access": {
+      "get": {
+        "operationId": "accessGet",
+        "summary": "App access policy (app admin only)",
+        "responses": {
+          "200": { "description": "Access snapshot" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not an app admin (error code admin_required)" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "put": {
+        "operationId": "accessSave",
+        "summary": "Save access policy; rolls back on self-lockout",
+        "responses": {
+          "200": { "description": "Saved snapshot" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not an app admin" },
+          "409": { "description": "self_lockout (rolled back)" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/directory/users": {
+      "get": {
+        "operationId": "directoryUsers",
+        "summary": "Search people by display name (app admin; min 2 characters)",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2, "maxLength": 64 } }
+        ],
+        "responses": {
+          "200": { "description": "{ items: [{ id, label }] }" },
+          "400": { "description": "search_too_short" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not an app admin" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/directory/groups": {
+      "get": {
+        "operationId": "directoryGroups",
+        "summary": "Search groups by name (app admin; min 2 characters)",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2, "maxLength": 64 } }
+        ],
+        "responses": {
+          "200": { "description": "{ items: [{ id, label }] }" },
+          "400": { "description": "search_too_short" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not an app admin" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    }
+  }
+}

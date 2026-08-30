@@ -1,0 +1,18 @@
+{
+	"name": "software-by-design/einkaufcheck",
+	"description": "EinkaufCheck Nextcloud app",
+	"license": "AGPL-3.0-or-later",
+	"require": {
+		"php": "^8.2"
+	},
+	"autoload": {
+		"psr-4": {
+			"OCA\\EinkaufCheck\\": "lib/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"OCA\\EinkaufCheck\\Tests\\": "tests/"
+		}
+	}
+}

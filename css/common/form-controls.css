@@ -1,0 +1,267 @@
+/**
+ * Form controls — ArbeitszeitCheck parity (prefix iv).
+ * Scoped to #content.app-einkaufcheck so NC chrome is untouched.
+ * Uses Nextcloud --color-* tokens (theme-safe). WCAG 2.1 AA: 44px targets,
+ * 3px focus ring, accent-color on checkbox/radio.
+ */
+#content.app-einkaufcheck {
+	--ekc-form-bg: var(--color-main-background);
+	--ekc-form-fg: var(--color-main-text);
+	--ekc-form-border: var(--color-border, var(--ekc-border, color-mix(in srgb, var(--color-main-text) 18%, transparent)));
+	--ekc-form-border-focus: var(--color-primary-element, #0082c9);
+	--ekc-form-ring: color-mix(in srgb, var(--color-primary-element, #0082c9) 28%, transparent);
+	--ekc-form-disabled-bg: var(--color-background-dark, var(--color-background-hover));
+	--ekc-form-error: var(--color-error-text, var(--color-error, #db0606));
+	--ekc-form-error-ring: color-mix(in srgb, var(--color-error-text, var(--color-error, #db0606)) 28%, transparent);
+	--ekc-form-success: var(--color-success, #2d7b46);
+	--ekc-form-radius: var(--ekc-radius-sm, 6px);
+}
+
+/* Text fields, selects, textareas — match AZ .form-input / base input chrome */
+#content.app-einkaufcheck #app-content input[type="text"]:not(.input-field__input),
+#content.app-einkaufcheck #app-content input[type="search"]:not(.input-field__input),
+#content.app-einkaufcheck #app-content input[type="email"],
+#content.app-einkaufcheck #app-content input[type="number"],
+#content.app-einkaufcheck #app-content input[type="date"],
+#content.app-einkaufcheck #app-content input[type="time"],
+#content.app-einkaufcheck #app-content input[type="datetime-local"],
+#content.app-einkaufcheck #app-content input[type="password"],
+#content.app-einkaufcheck #app-content input[type="url"],
+#content.app-einkaufcheck #app-content input[type="tel"],
+#content.app-einkaufcheck #app-content input:not([type]),
+#content.app-einkaufcheck #app-content textarea,
+#content.app-einkaufcheck #app-content select,
+#content.app-einkaufcheck #app-content .form-input,
+#content.app-einkaufcheck #app-content .form-select,
+#content.app-einkaufcheck #app-content .form-textarea,
+#content.app-einkaufcheck #app-content .ekc-input,
+#content.app-einkaufcheck #app-content .ekc-select,
+#content.app-einkaufcheck #app-content .ekc-textarea {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	min-height: 44px;
+	padding: var(--ekc-space-2, 0.5rem) var(--ekc-space-3, 0.75rem);
+	box-sizing: border-box;
+	font-family: inherit;
+	font-size: var(--ekc-fs-md, 1rem);
+	line-height: var(--ekc-line-base, 1.45);
+	font-weight: 400;
+	color: var(--ekc-form-fg);
+	background-color: var(--ekc-form-bg);
+	border: 1px solid var(--ekc-form-border);
+	border-radius: var(--ekc-form-radius);
+	transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+#content.app-einkaufcheck #app-content textarea,
+#content.app-einkaufcheck #app-content .form-textarea,
+#content.app-einkaufcheck #app-content .ekc-textarea {
+	min-height: 100px;
+	resize: vertical;
+	appearance: auto;
+	-webkit-appearance: auto;
+}
+
+/* Native select: AZ chevron + 44px height */
+#content.app-einkaufcheck #app-content select,
+#content.app-einkaufcheck #app-content select.ekc-input,
+#content.app-einkaufcheck #app-content .form-select,
+#content.app-einkaufcheck #app-content .ekc-select {
+	height: 44px;
+	min-height: 44px;
+	padding: 0.625rem 2.5rem 0.625rem 1rem;
+	line-height: 1.5;
+	appearance: none;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	background-color: var(--ekc-form-bg);
+	background-image: var(--icon-triangle-s-dark, url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b6b6b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e"));
+	background-position: right 0.75rem center;
+	background-repeat: no-repeat;
+	background-size: 1.25em 1.25em;
+	cursor: pointer;
+}
+
+#content.app-einkaufcheck #app-content select::-ms-expand,
+#content.app-einkaufcheck #app-content .form-select::-ms-expand {
+	display: none;
+}
+
+#content.app-einkaufcheck #app-content input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+#content.app-einkaufcheck #app-content textarea:focus-visible,
+#content.app-einkaufcheck #app-content select:focus-visible,
+#content.app-einkaufcheck #app-content .form-input:focus-visible,
+#content.app-einkaufcheck #app-content .form-select:focus-visible,
+#content.app-einkaufcheck #app-content .form-textarea:focus-visible {
+	border-color: var(--ekc-form-border-focus);
+	box-shadow: 0 0 0 3px var(--ekc-form-ring);
+	outline: none;
+}
+
+#content.app-einkaufcheck #app-content input:disabled,
+#content.app-einkaufcheck #app-content textarea:disabled,
+#content.app-einkaufcheck #app-content select:disabled,
+#content.app-einkaufcheck #app-content .form-input:disabled,
+#content.app-einkaufcheck #app-content .form-select:disabled {
+	background-color: var(--ekc-form-disabled-bg);
+	color: var(--ekc-muted, var(--color-text-maxcontrast));
+	cursor: not-allowed;
+	opacity: 0.85;
+}
+
+#content.app-einkaufcheck #app-content input::placeholder,
+#content.app-einkaufcheck #app-content textarea::placeholder,
+#content.app-einkaufcheck #app-content .form-input::placeholder {
+	color: var(--color-text-maxcontrast);
+	opacity: 1;
+}
+
+/* Error / success states (AZ) */
+#content.app-einkaufcheck #app-content .form-input--error,
+#content.app-einkaufcheck #app-content input[aria-invalid="true"],
+#content.app-einkaufcheck #app-content select[aria-invalid="true"],
+#content.app-einkaufcheck #app-content textarea[aria-invalid="true"] {
+	border-color: var(--ekc-form-error);
+}
+#content.app-einkaufcheck #app-content .form-input--error:focus,
+#content.app-einkaufcheck #app-content input[aria-invalid="true"]:focus,
+#content.app-einkaufcheck #app-content select[aria-invalid="true"]:focus,
+#content.app-einkaufcheck #app-content textarea[aria-invalid="true"]:focus {
+	border-color: var(--ekc-form-error);
+	box-shadow: 0 0 0 3px var(--ekc-form-error-ring);
+}
+
+/* Checkbox / radio — accent + touch-friendly label row */
+#content.app-einkaufcheck #app-content .form-checkbox,
+#content.app-einkaufcheck #app-content .form-radio,
+#content.app-einkaufcheck #app-content .ekc-checkbox,
+#content.app-einkaufcheck #app-content label:has(> input[type="checkbox"]),
+#content.app-einkaufcheck #app-content label:has(> input[type="radio"]) {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ekc-space-2, 0.5rem);
+	min-height: 44px;
+	cursor: pointer;
+	user-select: none;
+	color: var(--ekc-form-fg);
+}
+
+#content.app-einkaufcheck #app-content input[type="checkbox"],
+#content.app-einkaufcheck #app-content input[type="radio"],
+#content.app-einkaufcheck #app-content .form-checkbox input[type="checkbox"],
+#content.app-einkaufcheck #app-content .form-radio input[type="radio"],
+#content.app-einkaufcheck #app-content .ekc-checkbox input {
+	width: 1.125rem;
+	height: 1.125rem;
+	min-width: 1.125rem;
+	min-height: 1.125rem;
+	max-width: 1.125rem;
+	max-height: 1.125rem;
+	margin: 0;
+	padding: 0;
+	flex-shrink: 0;
+	cursor: pointer;
+	accent-color: var(--color-primary-element);
+	background-color: var(--ekc-form-bg);
+	border: 1px solid var(--ekc-form-border);
+	border-radius: 3px;
+	box-sizing: border-box;
+	color-scheme: inherit;
+	appearance: auto;
+	-webkit-appearance: auto;
+}
+
+#content.app-einkaufcheck #app-content input[type="radio"] {
+	border-radius: 50%;
+}
+
+#content.app-einkaufcheck #app-content input[type="checkbox"]:focus-visible,
+#content.app-einkaufcheck #app-content input[type="radio"]:focus-visible {
+	outline: 3px solid var(--ekc-form-border-focus);
+	outline-offset: 2px;
+}
+
+/* Do not restyle file / color / range / hidden / button inputs as text fields */
+#content.app-einkaufcheck #app-content input[type="file"],
+#content.app-einkaufcheck #app-content input[type="color"],
+#content.app-einkaufcheck #app-content input[type="range"],
+#content.app-einkaufcheck #app-content input[type="hidden"],
+#content.app-einkaufcheck #app-content input[type="checkbox"],
+#content.app-einkaufcheck #app-content input[type="radio"],
+#content.app-einkaufcheck #app-content input[type="button"],
+#content.app-einkaufcheck #app-content input[type="submit"],
+#content.app-einkaufcheck #app-content input[type="reset"],
+#content.app-einkaufcheck #app-content input[type="image"] {
+	/* checkbox/radio keep size rules above; reset text-field chrome for others */
+}
+
+#content.app-einkaufcheck #app-content input[type="file"],
+#content.app-einkaufcheck #app-content input[type="color"],
+#content.app-einkaufcheck #app-content input[type="range"],
+#content.app-einkaufcheck #app-content input[type="button"],
+#content.app-einkaufcheck #app-content input[type="submit"],
+#content.app-einkaufcheck #app-content input[type="reset"],
+#content.app-einkaufcheck #app-content input[type="image"] {
+	width: auto;
+	min-height: 44px;
+	padding: var(--ekc-space-2, 0.5rem) var(--ekc-space-3, 0.75rem);
+	background-image: none;
+	appearance: auto;
+	-webkit-appearance: auto;
+}
+
+/* Filter / form labels */
+#content.app-einkaufcheck #app-content .form-label,
+#content.app-einkaufcheck #app-content .ekc-filter-field label,
+#content.app-einkaufcheck #app-content .ekc-field label,
+#content.app-einkaufcheck #app-content label.form-label {
+	display: block;
+	font-size: var(--ekc-fs-sm, 0.875rem);
+	font-weight: 600;
+	color: var(--ekc-form-fg);
+	margin-bottom: var(--ekc-space-2, 0.5rem);
+}
+
+/* Combobox-ish NC / custom listboxes */
+#content.app-einkaufcheck #app-content [role="combobox"],
+#content.app-einkaufcheck #app-content [role="listbox"] {
+	min-height: 44px;
+	border-radius: var(--ekc-form-radius);
+	border: 1px solid var(--ekc-form-border);
+	box-sizing: border-box;
+}
+#content.app-einkaufcheck #app-content [role="combobox"]:focus-visible,
+#content.app-einkaufcheck #app-content [role="listbox"]:focus-visible {
+	border-color: var(--ekc-form-border-focus);
+	box-shadow: 0 0 0 3px var(--ekc-form-ring);
+	outline: none;
+}
+
+/* Inputs always fit the pane; touch-sized on all viewports (desktop-identical width behaviour). */
+#content.app-einkaufcheck #app-content input[type="text"]:not(.input-field__input),
+#content.app-einkaufcheck #app-content input[type="search"]:not(.input-field__input),
+#content.app-einkaufcheck #app-content input[type="email"],
+#content.app-einkaufcheck #app-content input[type="number"],
+#content.app-einkaufcheck #app-content input[type="date"],
+#content.app-einkaufcheck #app-content input[type="time"],
+#content.app-einkaufcheck #app-content textarea,
+#content.app-einkaufcheck #app-content select,
+#content.app-einkaufcheck #app-content .form-input,
+#content.app-einkaufcheck #app-content .form-select {
+	max-width: 100%;
+	min-height: 44px;
+}
+
+/* Switches keep their own chrome (do not force square checkbox look) */
+#content.app-einkaufcheck #app-content .ekc-switch input[type="checkbox"],
+#content.app-einkaufcheck #app-content .ekc-switch__input,
+#content.app-einkaufcheck #app-content input[type="checkbox"].ekc-switch__input,
+#content.app-einkaufcheck #app-content [role="switch"] {
+	width: auto;
+	height: auto;
+	min-width: 0;
+	min-height: 0;
+	border-radius: inherit;
+	accent-color: var(--color-primary-element);
+}
