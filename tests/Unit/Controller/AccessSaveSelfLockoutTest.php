@@ -15,6 +15,7 @@ use OCA\EinkaufCheck\Service\SettingsService;
 use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -52,6 +53,22 @@ class AccessSaveSelfLockoutTest extends TestCase {
 			'app_admins' => [],
 		]);
 
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$ws = [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_MANAGER,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => true,
+			],
+		];
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+
 		$controller = new ApiController(
 			$request,
 			$this->createMock(OfferFetchService::class),
@@ -64,6 +81,7 @@ class AccessSaveSelfLockoutTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 
 		try {

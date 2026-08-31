@@ -9,21 +9,21 @@ declare(strict_types=1);
 
 namespace OCA\EinkaufCheck\Listener;
 
-use OCA\EinkaufCheck\Service\SettingsService;
+use OCA\EinkaufCheck\Service\AccessControlService;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
 use OCP\Group\Events\GroupDeletedEvent;
 use Psr\Log\LoggerInterface;
 
 /**
- * Drop a deleted Nextcloud group from the access allow-list so a recreated
- * GID cannot inherit leftover EinkaufCheck access.
+ * Drop a deleted Nextcloud group from shopping-space assignments and the app
+ * door allow-list so a recreated GID cannot inherit leftover access.
  *
  * @template-implements IEventListener<GroupDeletedEvent>
  */
 class GroupDeletedListener implements IEventListener {
 	public function __construct(
-		private readonly SettingsService $settings,
+		private readonly AccessControlService $access,
 		private readonly LoggerInterface $logger,
 	) {
 	}
@@ -37,7 +37,7 @@ class GroupDeletedListener implements IEventListener {
 			return;
 		}
 		try {
-			$this->settings->removeGroupFromLists($gid);
+			$this->access->purgeGroup($gid);
 		} catch (\Throwable $e) {
 			$this->logger->warning('EinkaufCheck group-delete cleanup failed', [
 				'gid' => $gid,

@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.6.3] — 2026-08-31
+
+### Security
+- Contributor force-refresh bound to workspace saved PLZ/week (cannot probe arbitrary postcodes into shared cache)
+- List/watch update and delete serialized per workspace (`ekc-li-` / `ekc-wa-` locks)
+- Personal and create-workspace lock keys fit `oc_file_locks` (64-char `ekc-pw-` / `ekc-wc-` + md5)
+- Service-layer ACL on shopping list and watch user methods; cron uses job-trusted paths only
+- Peer-scoped directory search for non-admins; opaque 403 on forbidden workspace access
+- Removed dual prefs source-of-truth in `OfferFetchService`; workspace prefs only
+- HTTP offers use ACL-aware `hitsForUser`; workspace delete with cascade for individual managers
+
+### UI / accessibility
+- Theme tokens map to Nextcloud `--color-*`; light/dark/high-contrast and custom accent safe
+- Contributor PLZ/week fields locked in UI; settings-locked chrome matches server policy
+- Danger delete section and solid danger CTAs; private badge uses main-text (AA under custom accents)
+- Visual regression + theme matrix + axe WCAG 2.1 AA E2E gauntlet (mobile through 4K)
+- App Store screenshots + `info.xml` metadata (bugs, repository, keywords)
+
+### Tests
+- PHPUnit 184 / 709; integration 35 / 83; mutation gate 15/15; a11y 6/6; theme 19/19; visual 13/13
+
+## [1.6.0] — 2026-08-30
+
+### Security
+- Private-by-default shopping spaces (BudgetCheck-style): each user gets their own workspace; only invited members see the list
+- Optional sharing via individual invite (viewer / contributor / manager); groups only on Standard spaces
+- Opaque `access_denied` (403) for missing ≡ forbidden workspace IDs; ghost IDs no longer grant app-admin write
+- User/group delete purges memberships (cascade sole-owned spaces) instead of legacy `user_id` row deletes
+
+### UI
+- Shopping-space switcher, New private list, Settings → Shopping space / People
+- Viewer read-only chrome; honest privacy copy (not encryption)
+
 ## [1.5.6] — 2026-08-30
 
 ### UI

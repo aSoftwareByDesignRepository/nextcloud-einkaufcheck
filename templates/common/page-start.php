@@ -23,6 +23,11 @@ $urlsJson = (string)($_['urlsJson'] ?? '{}');
 $settingsSection = (string)($_['settingsSection'] ?? '');
 $headerIcon = (string)($_['headerIcon'] ?? ($pageId === 'settings' ? 'settings' : 'shopping-cart'));
 $settingsNav = is_array($_['settingsNav'] ?? null) ? $_['settingsNav'] : [];
+$workspaceJson = (string)($_['workspaceJson'] ?? '{}');
+$workspace = is_array($_['workspace'] ?? null) ? $_['workspace'] : null;
+$workspaceId = is_array($workspace) ? (int)($workspace['id'] ?? 0) : 0;
+$canEditList = !empty($workspace['capabilities']['canEditList']);
+$canManageSettings = !empty($workspace['capabilities']['canManageSettings']);
 $htmlLang = str_replace('_', '-', $l->getLanguageCode());
 $decodedUrls = json_decode($urlsJson, true);
 $navUrls = is_array($decodedUrls) ? ($decodedUrls['pages'] ?? []) : [];
@@ -39,6 +44,10 @@ require __DIR__ . '/navigation.php';
 	data-ekc-current-user="<?php p($currentUserId); ?>"
 	data-ekc-is-app-admin="<?php p($isAppAdmin ? '1' : '0'); ?>"
 	data-ekc-timezone="<?php p($timezone); ?>"
+	data-ekc-workspace-id="<?php p((string)$workspaceId); ?>"
+	data-ekc-can-edit-list="<?php p($canEditList ? '1' : '0'); ?>"
+	data-ekc-can-manage-settings="<?php p($canManageSettings ? '1' : '0'); ?>"
+	data-ekc-workspace="<?php p($workspaceJson); ?>"
 	data-ekc-urls="<?php p($urlsJson); ?>">
 	<a class="ekc-skip-link" href="#ekc-main-content"><?php p($l->t('Skip to main content')); ?></a>
 	<div id="ekc-live-region" class="ekc-sr-only" role="status" aria-live="polite" aria-atomic="true"></div>

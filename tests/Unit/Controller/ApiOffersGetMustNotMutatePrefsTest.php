@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\EinkaufCheck\Tests\Unit\Controller;
 
 use OCA\EinkaufCheck\Controller\ApiController;
+use OCA\EinkaufCheck\Exception\AccessDeniedException;
 use OCA\EinkaufCheck\Service\AccessControlService;
 use OCA\EinkaufCheck\Service\DirectorySearchService;
 use OCA\EinkaufCheck\Service\OfferFetchService;
@@ -16,6 +17,7 @@ use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchMatchService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -28,10 +30,9 @@ use PHPUnit\Framework\TestCase;
 class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 	public function testGetOffersNeverSavesPrefsEvenWhenQueryDiffers(): void {
 		$controller = $this->controller(
-			function (OfferFetchService $offers): void {
-				$offers->expects($this->never())->method('saveUserPrefs');
+			function (OfferFetchService $offers, WorkspaceService $workspaces): void {
+				$workspaces->expects($this->never())->method('savePrefs');
 				$offers->expects($this->never())->method('fetch');
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 				$offers->method('peekCache')->willReturnCallback(
 					static function (string $plz, string $week): array {
 						self::assertSame('80331', $plz);
@@ -48,7 +49,6 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 	public function testGetOffersIgnoresRefreshFlagAndDoesNotLiveFetch(): void {
 		$controller = $this->controller(
 			function (OfferFetchService $offers): void {
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 				$offers->expects($this->never())->method('fetch');
 				$offers->expects($this->exactly(2))->method('peekCache')->willReturnCallback(
 					static function (string $plz, string $week): array {
@@ -73,10 +73,9 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 			'per_l' => 1.19,
 		];
 		$controller = $this->controller(
-			function (OfferFetchService $offers) use ($milk): void {
-				$offers->expects($this->never())->method('saveUserPrefs');
+			function (OfferFetchService $offers, WorkspaceService $workspaces) use ($milk): void {
+				$workspaces->expects($this->never())->method('savePrefs');
 				$offers->expects($this->never())->method('fetch');
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 				$offers->method('peekCache')->willReturnCallback(
 					static function (string $plz, string $week) use ($milk): array {
 						self::assertSame('24149', $plz);
@@ -104,7 +103,6 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 	public function testGetOffersCacheMissThrowsWithoutLiveFetch(): void {
 		$controller = $this->controller(
 			function (OfferFetchService $offers): void {
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 				$offers->expects($this->never())->method('fetch');
 				$offers->method('peekCache')->willReturn(null);
 			},
@@ -116,10 +114,10 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 
 	public function testRefreshSavesPrefsThenLiveFetches(): void {
 		$controller = $this->controller(
-			function (OfferFetchService $offers): void {
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
-				$offers->expects($this->once())->method('saveUserPrefs')->with('alice', '80331', 'next')
-					->willReturn(['plz' => '80331', 'week' => 'next']);
+			function (OfferFetchService $offers, WorkspaceService $workspaces): void {
+				$workspaces->expects($this->once())->method('savePrefs')
+					->with(1, 'alice', '80331', 'next')
+					->willReturn(['plz' => '80331', 'week' => 'next', 'show_images' => false]);
 				$offers->expects($this->once())->method('fetch')->with('80331', 'next', true)
 					->willReturn(['offers' => []]);
 				$offers->expects($this->once())->method('peekCache')->with('80331', 'current')
@@ -127,7 +125,94 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 			},
 			['plz' => '80331', 'week' => 'next'],
 		);
-		$controller->offersRefresh();
+		$data = $controller->offersRefresh()->getData();
+		self::assertSame('80331', $data['plz']);
+		self::assertSame('next', $data['week']);
+	}
+
+	public function testContributorRefreshIgnoresRequestedPlzAndDoesNotSavePrefs(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('alice');
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+
+		$access = $this->createMock(AccessControlService::class);
+		$access->method('assertCanUseApp');
+		$access->method('lastUsedWorkspace')->willReturn(1);
+		$access->method('role')->willReturn(AccessControlService::ROLE_CONTRIBUTOR);
+		$access->method('ensureMinimumRole')->willReturnCallback(
+			static function (int $wsId, string $uid, string $minimum): string {
+				self::assertSame(1, $wsId);
+				self::assertSame('alice', $uid);
+				if ($minimum === AccessControlService::ROLE_MANAGER) {
+					throw new AccessDeniedException();
+				}
+				self::assertSame(AccessControlService::ROLE_CONTRIBUTOR, $minimum);
+				return AccessControlService::ROLE_CONTRIBUTOR;
+			}
+		);
+
+		$offers = $this->createMock(OfferFetchService::class);
+		$offers->expects($this->once())->method('fetch')->with('24149', 'current', true)
+			->willReturn(['offers' => []]);
+		$offers->method('peekCache')->willReturn(null);
+
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$ws = [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_CONTRIBUTOR,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => false,
+			],
+		];
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+		$workspaces->method('getPrefs')->willReturn([
+			'plz' => '24149',
+			'week' => 'current',
+			'show_images' => false,
+		]);
+		$workspaces->expects($this->never())->method('savePrefs');
+
+		$watch = $this->createMock(WatchService::class);
+		$watch->method('hitsForUser')->willReturn([]);
+
+		$rl = $this->createMock(RateLimitService::class);
+		$rl->method('assertAllowed');
+
+		$request = $this->createMock(IRequest::class);
+		$request->method('getParam')->willReturnCallback(
+			static function (string $key, mixed $default = null): mixed {
+				return match ($key) {
+					'plz' => '80331',
+					'week' => 'next',
+					default => $default,
+				};
+			}
+		);
+
+		$controller = new ApiController(
+			$request,
+			$offers,
+			$this->createMock(ShoppingListService::class),
+			$watch,
+			$session,
+			$rl,
+			$access,
+			$this->createMock(SettingsService::class),
+			$this->createMock(DirectorySearchService::class),
+			$this->createMock(PriceHistoryService::class),
+			new WeekCompareService(new WatchMatchService()),
+			$workspaces,
+		);
+		$data = $controller->offersRefresh()->getData();
+		self::assertSame('24149', $data['plz']);
+		self::assertSame('current', $data['week']);
 	}
 
 	public function testStoresStatusGoesThroughAccessDoor(): void {
@@ -139,6 +224,8 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 		$access->expects($this->once())->method('assertCanUseApp')->with('alice');
 		$offers = $this->createMock(OfferFetchService::class);
 		$offers->method('storesStatus')->willReturn([]);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
 
 		$controller = new ApiController(
 			$this->createMock(IRequest::class),
@@ -152,6 +239,7 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			new WeekCompareService(new WatchMatchService()),
+			$workspaces,
 		);
 		$controller->storesStatus();
 	}
@@ -169,10 +257,9 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 			]);
 
 		$controller = $this->controller(
-			function (OfferFetchService $offers): void {
-				$offers->expects($this->never())->method('saveUserPrefs');
+			function (OfferFetchService $offers, WorkspaceService $workspaces): void {
+				$workspaces->expects($this->never())->method('savePrefs');
 				$offers->expects($this->never())->method('fetch');
-				$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 				$offers->method('peekCache')->with('80331', 'next')->willReturn(null);
 			},
 			['plz' => '80331', 'week' => 'next'],
@@ -184,11 +271,11 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 	}
 
 	/**
-	 * @param callable(OfferFetchService):void $configureOffers
+	 * @param callable(OfferFetchService, WorkspaceService):void $configure
 	 * @param array<string, string> $params
 	 */
 	private function controller(
-		callable $configureOffers,
+		callable $configure,
 		array $params,
 		?PriceHistoryService $history = null,
 	): ApiController {
@@ -200,7 +287,9 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 		$access->method('assertCanUseApp');
 
 		$offers = $this->createMock(OfferFetchService::class);
-		$configureOffers($offers);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
+		$configure($offers, $workspaces);
 
 		$watch = $this->createMock(WatchService::class);
 		$watch->method('hitsForUser')->willReturn([]);
@@ -228,6 +317,39 @@ class ApiOffersGetMustNotMutatePrefsTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$history ?? $this->createMock(PriceHistoryService::class),
 			new WeekCompareService(new WatchMatchService()),
+			$workspaces,
 		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function defaultWorkspace(): array {
+		return [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_MANAGER,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => true,
+			],
+		];
+	}
+
+	private function wireWorkspaceDefaults(WorkspaceService $workspaces, AccessControlService $access): void {
+		$ws = $this->defaultWorkspace();
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+		$workspaces->method('getPrefs')->willReturn([
+			'plz' => '24149',
+			'week' => 'current',
+			'show_images' => false,
+		]);
+		$access->method('lastUsedWorkspace')->willReturn(1);
+		$access->method('role')->willReturn(AccessControlService::ROLE_MANAGER);
+		$access->method('ensureMinimumRole')->willReturn(AccessControlService::ROLE_MANAGER);
 	}
 }

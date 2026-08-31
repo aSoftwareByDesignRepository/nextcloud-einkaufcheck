@@ -9,7 +9,9 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__, 2);
 $phpunitCandidates = [
+	'/var/www/html/custom_apps/budgetcheck/vendor/bin/phpunit',
 	'/var/www/html/custom_apps/snackcheck/vendor/bin/phpunit',
+	$root . '/../budgetcheck/vendor/bin/phpunit',
 	$root . '/../snackcheck/vendor/bin/phpunit',
 ];
 $phpunit = null;
@@ -167,6 +169,34 @@ function mutants(string $root): array {
 			'search' => 'return is_array($offers) && $offers !== [];',
 			'replace' => 'return is_array($offers);',
 			'filter' => 'OfferFetchPeekCacheTest::testIsPersistableRejectsEmptyOffers',
+		],
+		[
+			'name' => 'personal-lock-key-overflow',
+			'file' => $root . '/lib/Service/WorkspaceService.php',
+			'search' => "private const LOCK_PERSONAL_PREFIX = 'ekc-pw-';",
+			'replace' => "private const LOCK_PERSONAL_PREFIX = 'einkaufcheck/personal/overflow-';",
+			'filter' => 'WorkspaceLockKeyLengthTest::testPersonalAndCreateLockKeysFitFileLocksColumn',
+		],
+		[
+			'name' => 'list-service-acl-stripped',
+			'file' => $list,
+			'search' => "public function list(int \$workspaceId, string \$actorUserId): array {\n\t\t\$this->access->ensureMinimumRole(\$workspaceId, \$actorUserId, AccessControlService::ROLE_VIEWER);\n\t\treturn \$this->listRows(\$workspaceId);\n\t}",
+			'replace' => "public function list(int \$workspaceId, string \$actorUserId): array {\n\t\treturn \$this->listRows(\$workspaceId);\n\t}",
+			'filter' => 'PrivateWorkspaceAclAttackTest::testAppAdminCannotListItemsInForeignPrivateSpaceViaServiceIdGuess',
+		],
+		[
+			'name' => 'list-update-unlocked',
+			'file' => $list,
+			'search' => "public function update(int \$workspaceId, string \$actorUserId, int \$id, array \$payload): array {\n\t\t\$this->access->ensureMinimumRole(\$workspaceId, \$actorUserId, AccessControlService::ROLE_CONTRIBUTOR);\n\t\treturn \$this->withWorkspaceLock(\$workspaceId, function () use (\$workspaceId, \$id, \$payload): array {",
+			'replace' => "public function update(int \$workspaceId, string \$actorUserId, int \$id, array \$payload): array {\n\t\t\$this->access->ensureMinimumRole(\$workspaceId, \$actorUserId, AccessControlService::ROLE_CONTRIBUTOR);\n\t\treturn (function () use (\$workspaceId, \$id, \$payload): array {",
+			'filter' => 'ListWatchWriteLockContractTest::testShoppingListMutationsUseWorkspaceLock',
+		],
+		[
+			'name' => 'contributor-refresh-plz-unbound',
+			'file' => $root . '/lib/Controller/ApiController.php',
+			'search' => "\t\t\$plz = \$prefs['plz'];\n\t\t\$week = \$prefs['week'];\n\t\ttry {\n\t\t\t\$this->accessControl->ensureMinimumRole(\$wsId, \$uid, AccessControlService::ROLE_MANAGER);\n\t\t\t\$plz = \$requestedPlz;\n\t\t\t\$week = \$requestedWeek;\n\t\t\t\$this->workspaces->savePrefs(\$wsId, \$uid, \$plz, \$week);\n\t\t} catch (AccessDeniedException) {\n\t\t\t// contributor: bound to saved prefs\n\t\t}",
+			'replace' => "\t\t\$plz = \$requestedPlz;\n\t\t\$week = \$requestedWeek;\n\t\ttry {\n\t\t\t\$this->accessControl->ensureMinimumRole(\$wsId, \$uid, AccessControlService::ROLE_MANAGER);\n\t\t\t\$this->workspaces->savePrefs(\$wsId, \$uid, \$plz, \$week);\n\t\t} catch (AccessDeniedException) {\n\t\t\t// contributor still fetches requested plz (INSECURE mutant)\n\t\t}",
+			'filter' => 'ApiOffersGetMustNotMutatePrefsTest::testContributorRefreshIgnoresRequestedPlzAndDoesNotSavePrefs',
 		],
 	];
 }

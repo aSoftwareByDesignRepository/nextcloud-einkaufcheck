@@ -11,6 +11,8 @@ namespace OCA\EinkaufCheck\Middleware;
 
 use OCA\EinkaufCheck\AppInfo\Application;
 use OCA\EinkaufCheck\Controller\ApiController;
+use OCA\EinkaufCheck\Controller\PageController;
+use OCA\EinkaufCheck\Exception\AccessDeniedException;
 use OCA\EinkaufCheck\Exception\AppAccessDeniedException;
 use OCA\EinkaufCheck\Exception\NotFoundException;
 use OCA\EinkaufCheck\Exception\RateLimitExceededException;
@@ -37,8 +39,7 @@ class AppAccessMiddleware extends Middleware {
 	}
 
 	public function beforeController($controller, $methodName): void {
-		$class = is_object($controller) ? get_class($controller) : '';
-		if (!str_starts_with($class, 'OCA\\EinkaufCheck\\Controller\\')) {
+		if (!$this->isOurController($controller)) {
 			return;
 		}
 		$user = $this->userSession->getUser();
@@ -49,8 +50,7 @@ class AppAccessMiddleware extends Middleware {
 	}
 
 	public function afterException($controller, $methodName, \Exception $exception) {
-		$class = is_object($controller) ? get_class($controller) : '';
-		if (!str_starts_with($class, 'OCA\\EinkaufCheck\\Controller\\')) {
+		if (!$this->isOurController($controller)) {
 			throw $exception;
 		}
 
@@ -59,11 +59,22 @@ class AppAccessMiddleware extends Middleware {
 		if ($exception instanceof AppAccessDeniedException) {
 			return $this->accessDeniedResponse($controller, $exception, $l);
 		}
+		if ($exception instanceof AccessDeniedException) {
+			return $this->envelope(
+				$exception->getErrorCode(),
+				$l->t('You cannot access that shopping space.'),
+				Http::STATUS_FORBIDDEN,
+				$exception->getDetails(),
+			);
+		}
+		// ValidationException extends InvalidArgumentException — must be checked first.
 		if ($exception instanceof ValidationException) {
 			$code = $exception->getErrorCode();
 			$status = match ($code) {
 				'fetch_failed', 'fetch_busy' => Http::STATUS_BAD_GATEWAY,
-				'offers_stale', 'self_lockout', 'list_busy', 'watch_busy', 'list_full', 'watch_full' => Http::STATUS_CONFLICT,
+				'offers_stale', 'self_lockout', 'list_busy', 'watch_busy', 'list_full', 'watch_full',
+				'already_member', 'last_manager', 'private_workspace_groups_forbidden',
+				'workspace_has_group_members', 'workspace_limit' => Http::STATUS_CONFLICT,
 				default => Http::STATUS_BAD_REQUEST,
 			};
 			$message = match ($code) {
@@ -86,9 +97,26 @@ class AppAccessMiddleware extends Middleware {
 				'unknown_group' => $l->t('One or more groups do not exist.'),
 				'unknown_user' => $l->t('One or more people do not exist.'),
 				'invalid_bool' => $l->t('That field must be yes or no.'),
+				'invalid_name' => $l->t('Name must be between 1 and 128 characters.'),
+				'invalid_role' => $l->t('That role is not allowed.'),
+				'user_required' => $l->t('Pick a person to add.'),
+				'group_required' => $l->t('Pick a group to add.'),
+				'already_member' => $l->t('They are already a member of this shopping space.'),
+				'last_manager' => $l->t('You cannot remove or demote the last manager. Promote someone else first.'),
+				'private_workspace_groups_forbidden' => $l->t('Private shopping spaces only allow individual people — not groups.'),
+				'workspace_has_group_members' => $l->t('Remove all groups before making this shopping space private.'),
+				'workspace_limit' => $l->t('You already have the maximum number of shopping spaces.'),
 				default => $l->t('Please check your input and try again.'),
 			};
 			return $this->envelope($code, $message, $status, $exception->getDetails());
+		}
+		if ($exception instanceof \InvalidArgumentException) {
+			return $this->envelope(
+				'invalid_argument',
+				$l->t('Please check your input and try again.'),
+				Http::STATUS_BAD_REQUEST,
+				['reason' => $exception->getMessage()],
+			);
 		}
 		if ($exception instanceof NotFoundException) {
 			return $this->envelope(
@@ -170,5 +198,16 @@ class AppAccessMiddleware extends Middleware {
 			|| str_starts_with($uri, '/apps/einkaufcheck/api')
 			|| str_contains($uri, '/apps/einkaufcheck/api')
 			|| str_starts_with($path, '/api');
+	}
+
+	private function isOurController(mixed $controller): bool {
+		if (!is_object($controller)) {
+			return false;
+		}
+		if ($controller instanceof ApiController || $controller instanceof PageController) {
+			return true;
+		}
+		$class = get_class($controller);
+		return str_starts_with($class, 'OCA\\EinkaufCheck\\Controller\\');
 	}
 }

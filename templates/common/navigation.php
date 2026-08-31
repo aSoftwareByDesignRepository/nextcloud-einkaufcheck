@@ -21,6 +21,9 @@ $offersUrl = (string)($pages['offers'] ?? '#');
 $trendsUrl = (string)($pages['trends'] ?? '#');
 $settingsUrl = (string)($pages['settings'] ?? '#');
 $roleLabel = (string)($_['roleLabel'] ?? $l->t('Member'));
+$workspace = is_array($_['workspace'] ?? null) ? $_['workspace'] : null;
+$workspaceName = is_array($workspace) ? (string)($workspace['name'] ?? '') : '';
+$workspacePrivacy = is_array($workspace) ? (string)($workspace['privacyMode'] ?? 'private') : 'private';
 /** @var list<array{slug: string, url: string, navLabel: string, active: bool}> $settingsNav */
 $settingsNav = is_array($_['settingsNav'] ?? null) ? $_['settingsNav'] : [];
 ?>
@@ -36,6 +39,26 @@ $settingsNav = is_array($_['settingsNav'] ?? null) ? $_['settingsNav'] : [];
 			<p class="ekc-brand__subtitle"><?php p($l->t('Own-brand offers and shopping list')); ?></p>
 			<span class="ekc-badge"><?php p($roleLabel); ?></span>
 		</div>
+	</div>
+	<div class="ekc-workspace-switcher" data-ekc-workspace-switcher>
+		<label class="ekc-workspace-switcher__label" for="ekc-workspace-select"><?php p($l->t('Shopping space')); ?></label>
+		<select id="ekc-workspace-select" class="ekc-input ekc-workspace-switcher__select" data-ekc-workspace-select aria-describedby="ekc-workspace-switcher-hint">
+			<?php if ($workspaceName !== ''): ?>
+				<option value="<?php p((string)(int)($workspace['id'] ?? 0)); ?>" selected><?php p($workspaceName); ?></option>
+			<?php endif; ?>
+		</select>
+		<p id="ekc-workspace-switcher-hint" class="ekc-workspace-switcher__hint">
+			<?php if ($workspacePrivacy === 'private'): ?>
+				<span class="ekc-badge ekc-badge--private"><?php p($l->t('Private')); ?></span>
+				<?php p($l->t('Only invited people can see this list.')); ?>
+			<?php else: ?>
+				<span class="ekc-badge ekc-badge--neutral"><?php p($l->t('Shared')); ?></span>
+				<?php p($l->t('Invited people and groups can see this list.')); ?>
+			<?php endif; ?>
+		</p>
+		<button type="button" class="button ekc-workspace-switcher__new" data-ekc-workspace-create>
+			<?php p($l->t('New private list')); ?>
+		</button>
 	</div>
 	<div class="ekc-nav__body">
 		<ul class="ekc-nav__list">

@@ -19,6 +19,7 @@ class AlertService {
 	public function __construct(
 		private readonly WatchService $watch,
 		private readonly OfferFetchService $offers,
+		private readonly WorkspaceService $workspaces,
 		private readonly INotificationManager $notifications,
 		private readonly LoggerInterface $logger,
 		private readonly AccessControlService $access,
@@ -26,32 +27,36 @@ class AlertService {
 	}
 
 	/**
-	 * @return array{users: int, notified: int}
+	 * @return array{workspaces: int, notified: int}
 	 */
 	public function runAll(): array {
-		$users = $this->watch->usersWithWatches();
+		$workspaceIds = $this->watch->workspaceIdsWithWatches();
 		$notified = 0;
-		foreach ($users as $uid) {
-			if (!$this->access->canUseApp($uid)) {
-				continue;
-			}
+		foreach ($workspaceIds as $wsId) {
 			try {
-				$notified += $this->runForUser($uid);
+				$notified += $this->runForWorkspace($wsId);
 			} catch (\Throwable $e) {
-				$this->logger->warning('EinkaufCheck watch alert failed for {user}', [
-					'user' => $uid,
+				$this->logger->warning('EinkaufCheck watch alert failed for workspace {ws}', [
+					'ws' => $wsId,
 					'exception' => $e,
 				]);
 			}
 		}
-		return ['users' => count($users), 'notified' => $notified];
+		return ['workspaces' => count($workspaceIds), 'notified' => $notified];
 	}
 
-	public function runForUser(string $userId): int {
-		$prefs = $this->offers->getUserPrefs($userId);
-		$data = $this->offers->fetch($prefs['plz'], 'current', false);
+	public function runForWorkspace(int $workspaceId): int {
+		$ws = $this->workspaces->loadById($workspaceId);
+		if ($ws === null) {
+			return 0;
+		}
+		$plz = (string)($ws['plz'] ?? '24149');
+		if (!preg_match('/^\d{5}$/', $plz)) {
+			$plz = '24149';
+		}
+		$data = $this->offers->fetch($plz, 'current', false);
 		$offers = is_array($data['offers'] ?? null) ? $data['offers'] : [];
-		$hits = $this->watch->hitsForUser($userId, $offers);
+		$hits = $this->watch->hitsForWorkspace($workspaceId, $offers);
 
 		$byWatch = [];
 		foreach ($hits as $hit) {
@@ -63,8 +68,13 @@ class AlertService {
 		}
 
 		$watches = [];
-		foreach ($this->watch->list($userId, true) as $w) {
+		foreach ($this->watch->listForJob($workspaceId, true) as $w) {
 			$watches[(int)$w['id']] = $w;
+		}
+
+		$recipients = $this->access->notifyUserIdsForWorkspace($workspaceId);
+		if ($recipients === []) {
+			return 0;
 		}
 
 		$sent = 0;
@@ -72,7 +82,7 @@ class AlertService {
 			$group = $byWatch[$wid] ?? [];
 			if ($group === []) {
 				if (($watch['last_hit_key'] ?? '') !== '') {
-					$this->watch->setLastHitKey($userId, $wid, '');
+					$this->watch->setLastHitKey($workspaceId, $wid, '');
 				}
 				continue;
 			}
@@ -102,38 +112,46 @@ class AlertService {
 				continue;
 			}
 
-			// Claim first (CAS), then notify. Rollback the claim if notify fails so
-			// a later run can retry — concurrent workers must not double-notify.
-			if (!$this->watch->claimHitKey($userId, $wid, $oldKey, $combined)) {
+			if (!$this->watch->claimHitKey($workspaceId, $wid, $oldKey, $combined)) {
 				$this->logger->info('EinkaufCheck watch hit already claimed', [
-					'user' => $userId,
+					'workspace' => $workspaceId,
 					'watch' => $wid,
 				]);
 				continue;
 			}
 
-			try {
-				$notification = $this->notifications->createNotification();
-				$notification->setApp(Application::APP_ID)
-					->setUser($userId)
-					->setDateTime(new \DateTime())
-					->setObject('watch', (string)$wid)
-					->setSubject(self::SUBJECT, [
-						'query' => (string)$watch['query'],
-						'lines' => implode("\n", $lines),
-						'count' => (string)count($lines),
+			$anyOk = false;
+			foreach ($recipients as $userId) {
+				try {
+					$notification = $this->notifications->createNotification();
+					$notification->setApp(Application::APP_ID)
+						->setUser($userId)
+						->setDateTime(new \DateTime())
+						->setObject('watch', (string)$wid)
+						->setSubject(self::SUBJECT, [
+							'query' => (string)$watch['query'],
+							'lines' => implode("\n", $lines),
+							'count' => (string)count($lines),
+						]);
+					$this->notifications->notify($notification);
+					$anyOk = true;
+					$sent++;
+				} catch (\Throwable $e) {
+					$this->logger->warning('EinkaufCheck notify failed for member', [
+						'user' => $userId,
+						'workspace' => $workspaceId,
+						'watch' => $wid,
+						'exception' => $e,
 					]);
-				$this->notifications->notify($notification);
-			} catch (\Throwable $e) {
-				$this->watch->setLastHitKey($userId, $wid, $oldKey);
-				$this->logger->warning('EinkaufCheck notify failed; hit key restored for retry', [
-					'user' => $userId,
-					'watch' => $wid,
-					'exception' => $e,
-				]);
-				continue;
+				}
 			}
-			$sent++;
+			if (!$anyOk) {
+				$this->watch->setLastHitKey($workspaceId, $wid, $oldKey);
+				$this->logger->warning('EinkaufCheck notify failed for all members; hit key restored', [
+					'workspace' => $workspaceId,
+					'watch' => $wid,
+				]);
+			}
 		}
 		return $sent;
 	}

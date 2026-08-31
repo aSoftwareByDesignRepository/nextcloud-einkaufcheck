@@ -308,7 +308,7 @@
     "/api/directory/users": {
       "get": {
         "operationId": "directoryUsers",
-        "summary": "Search people by display name (app admin; min 2 characters)",
+        "summary": "Search people by display name (app admin or workspace manager; min 2 characters)",
         "parameters": [
           { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2, "maxLength": 64 } }
         ],
@@ -316,7 +316,7 @@
           "200": { "description": "{ items: [{ id, label }] }" },
           "400": { "description": "search_too_short" },
           "401": { "description": "Not logged in" },
-          "403": { "description": "Not an app admin" },
+          "403": { "description": "Not an app admin or workspace manager" },
           "429": { "description": "Rate limited" }
         }
       }
@@ -324,7 +324,7 @@
     "/api/directory/groups": {
       "get": {
         "operationId": "directoryGroups",
-        "summary": "Search groups by name (app admin; min 2 characters)",
+        "summary": "Search groups by name (app admin or workspace manager; min 2 characters)",
         "parameters": [
           { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "minLength": 2, "maxLength": 64 } }
         ],
@@ -332,7 +332,185 @@
           "200": { "description": "{ items: [{ id, label }] }" },
           "400": { "description": "search_too_short" },
           "401": { "description": "Not logged in" },
-          "403": { "description": "Not an app admin" },
+          "403": { "description": "Not an app admin or workspace manager" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspaces": {
+      "get": {
+        "operationId": "workspacesList",
+        "summary": "List shopping spaces the current user can open",
+        "responses": {
+          "200": { "description": "{ items, capabilities }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "post": {
+        "operationId": "workspacesCreate",
+        "summary": "Create a shopping space (private or standard)",
+        "responses": {
+          "201": { "description": "Created workspace with capabilities" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspaces/{id}": {
+      "get": {
+        "operationId": "workspaceGet",
+        "summary": "Get one shopping space (opaque 403 when missing or unauthorized)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Workspace with role and capabilities" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "App access denied or not a member" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "put": {
+        "operationId": "workspaceUpdate",
+        "summary": "Rename or change privacy of a shopping space (manager)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Updated workspace" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "workspaceDelete",
+        "summary": "Delete a shopping space you individually manage (cascade list/watch/members)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ ok, activeWorkspaceId }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not an individual manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspaces/{id}/members": {
+      "get": {
+        "operationId": "workspaceMembers",
+        "summary": "List individual and group members of a shopping space",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ items }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a member" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "post": {
+        "operationId": "workspaceAddMember",
+        "summary": "Invite a person to a shopping space (manager)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "201": { "description": "{ items }" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspace-members/{id}": {
+      "put": {
+        "operationId": "memberUpdate",
+        "summary": "Change an individual member role (manager)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ items }" },
+          "400": { "description": "Validation (including last-manager floor)" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "memberDelete",
+        "summary": "Remove an individual member (manager)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ items }" },
+          "400": { "description": "Validation (including last-manager floor)" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspaces/{id}/group-members": {
+      "post": {
+        "operationId": "workspaceAddGroupMember",
+        "summary": "Add a group to a standard shopping space (manager; private spaces reject groups)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "201": { "description": "{ items }" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager or private space" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      }
+    },
+    "/api/workspace-group-members/{id}": {
+      "put": {
+        "operationId": "groupMemberUpdate",
+        "summary": "Change a group member role (viewer or contributor only)",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ items }" },
+          "400": { "description": "Validation" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
+          "429": { "description": "Rate limited" }
+        }
+      },
+      "delete": {
+        "operationId": "groupMemberDelete",
+        "summary": "Remove a group membership",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "{ items }" },
+          "401": { "description": "Not logged in" },
+          "403": { "description": "Not a manager" },
+          "412": { "description": "Missing CSRF token" },
           "429": { "description": "Rate limited" }
         }
       }

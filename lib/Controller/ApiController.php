@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace OCA\EinkaufCheck\Controller;
 
 use OCA\EinkaufCheck\AppInfo\Application;
+use OCA\EinkaufCheck\Exception\AccessDeniedException;
 use OCA\EinkaufCheck\Exception\AppAccessDeniedException;
 use OCA\EinkaufCheck\Exception\ValidationException;
 use OCA\EinkaufCheck\Service\AccessControlService;
@@ -23,6 +24,7 @@ use OCA\EinkaufCheck\Service\SettingsService;
 use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -43,6 +45,7 @@ class ApiController extends Controller {
 		private readonly DirectorySearchService $directory,
 		private readonly PriceHistoryService $history,
 		private readonly WeekCompareService $weekCompare,
+		private readonly WorkspaceService $workspaces,
 	) {
 		parent::__construct(Application::APP_ID, $request);
 	}
@@ -55,6 +58,37 @@ class ApiController extends Controller {
 		$uid = $user->getUID();
 		$this->accessControl->assertCanUseApp($uid);
 		return $uid;
+	}
+
+	/**
+	 * Resolve workspace from query/body, last-used, or auto-provisioned personal space.
+	 * Always membership-gates the resolved id (fail closed for ghosts).
+	 */
+	private function workspaceId(string $uid): int {
+		$body = $this->body();
+		$raw = $this->request->getParam('workspaceId', null);
+		if ($raw === null || $raw === '') {
+			$raw = $this->request->getParam('workspace_id', null);
+		}
+		if (($raw === null || $raw === '') && isset($body['workspaceId'])) {
+			$raw = $body['workspaceId'];
+		}
+		if (($raw === null || $raw === '') && isset($body['workspace_id'])) {
+			$raw = $body['workspace_id'];
+		}
+		$wid = (int)($raw ?? 0);
+		if ($wid < 1) {
+			$last = $this->accessControl->lastUsedWorkspace($uid);
+			if ($last !== null && $this->accessControl->role($last, $uid) !== null) {
+				$wid = $last;
+			} else {
+				$ws = $this->workspaces->ensurePersonalWorkspace($uid);
+				$wid = (int)$ws['id'];
+			}
+		}
+		// Opaque membership + existence gate; remembers last-used on success.
+		$this->workspaces->getForUser($wid, $uid);
+		return $wid;
 	}
 
 	/**
@@ -90,9 +124,113 @@ class ApiController extends Controller {
 	}
 
 	#[NoAdminRequired]
+	public function workspacesList(): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'workspaces_read', 60, 3600);
+		$list = $this->workspaces->listForUser($uid);
+		if ($list === []) {
+			$list = [$this->workspaces->ensurePersonalWorkspace($uid)];
+		}
+		return new JSONResponse([
+			'items' => $list,
+			'capabilities' => [
+				'canCreateWorkspace' => $this->accessControl->canCreateWorkspace($uid, AccessControlService::PRIVACY_PRIVATE)
+					|| $this->accessControl->canCreateWorkspace($uid, AccessControlService::PRIVACY_STANDARD),
+				'canCreatePrivateWorkspace' => $this->accessControl->canCreateWorkspace($uid, AccessControlService::PRIVACY_PRIVATE),
+				'canCreateStandardWorkspace' => $this->accessControl->canCreateWorkspace($uid, AccessControlService::PRIVACY_STANDARD),
+			],
+		]);
+	}
+
+	#[NoAdminRequired]
+	public function workspacesCreate(): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'workspaces_write', 30, 3600);
+		$body = $this->body();
+		$name = (string)($body['name'] ?? 'My shopping list');
+		$privacy = (string)($body['privacyMode'] ?? $body['privacy_mode'] ?? AccessControlService::PRIVACY_PRIVATE);
+		$ws = $this->workspaces->createWorkspace($uid, $name, $privacy);
+		return new JSONResponse($ws, Http::STATUS_CREATED);
+	}
+
+	#[NoAdminRequired]
+	public function workspaceGet(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'workspaces_read', 60, 3600);
+		return new JSONResponse($this->workspaces->getForUser($id, $uid));
+	}
+
+	#[NoAdminRequired]
+	public function workspaceUpdate(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'workspaces_write', 30, 3600);
+		return new JSONResponse($this->workspaces->updateWorkspace($id, $uid, $this->body()));
+	}
+
+	#[NoAdminRequired]
+	public function workspaceDelete(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'workspaces_write', 20, 3600);
+		return new JSONResponse($this->workspaces->deleteWorkspace($id, $uid));
+	}
+
+	#[NoAdminRequired]
+	public function workspaceMembers(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_read', 60, 3600);
+		return new JSONResponse(['items' => $this->workspaces->listMembers($id, $uid)]);
+	}
+
+	#[NoAdminRequired]
+	public function workspaceAddMember(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		$items = $this->workspaces->addMember($id, $uid, $this->body());
+		return new JSONResponse(['items' => $items], Http::STATUS_CREATED);
+	}
+
+	#[NoAdminRequired]
+	public function memberUpdate(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		return new JSONResponse(['items' => $this->workspaces->updateMember($id, $uid, $this->body())]);
+	}
+
+	#[NoAdminRequired]
+	public function memberDelete(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		return new JSONResponse(['items' => $this->workspaces->removeMember($id, $uid)]);
+	}
+
+	#[NoAdminRequired]
+	public function workspaceAddGroupMember(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		$items = $this->workspaces->addGroupMember($id, $uid, $this->body());
+		return new JSONResponse(['items' => $items], Http::STATUS_CREATED);
+	}
+
+	#[NoAdminRequired]
+	public function groupMemberUpdate(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		return new JSONResponse(['items' => $this->workspaces->updateGroupMember($id, $uid, $this->body())]);
+	}
+
+	#[NoAdminRequired]
+	public function groupMemberDelete(int $id): JSONResponse {
+		$uid = $this->uid();
+		$this->rateLimit->assertAllowed($uid, 'members_write', 30, 3600);
+		return new JSONResponse(['items' => $this->workspaces->removeGroupMember($id, $uid)]);
+	}
+
+	#[NoAdminRequired]
 	public function offers(): JSONResponse {
 		$uid = $this->uid();
-		$prefs = $this->offers->getUserPrefs($uid);
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
+		$prefs = $this->workspaces->getPrefs($wsId, $uid);
 		$plz = (string)$this->request->getParam('plz', $prefs['plz']);
 		$week = (string)$this->request->getParam('week', $prefs['week']);
 		$this->rateLimit->assertAllowed($uid, 'offers_read', 120, 3600);
@@ -106,30 +244,47 @@ class ApiController extends Controller {
 		}
 		$data = $this->withWeekTips($data, $plz, $week);
 		$offerList = is_array($data['offers'] ?? null) ? $data['offers'] : [];
-		$data['watch_hits'] = $this->watch->hitsForUser($uid, $offerList);
+		$data['watch_hits'] = $this->watch->hitsForUser($wsId, $uid, $offerList);
+		$data['workspaceId'] = $wsId;
+		$data['plz'] = $plz;
+		$data['week'] = $week;
 		return new JSONResponse($data);
 	}
 
 	#[NoAdminRequired]
 	public function offersRefresh(): JSONResponse {
 		$uid = $this->uid();
-		$prefs = $this->offers->getUserPrefs($uid);
-		$plz = (string)$this->request->getParam('plz', $prefs['plz']);
-		$week = (string)$this->request->getParam('week', $prefs['week']);
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
+		$prefs = $this->workspaces->getPrefs($wsId, $uid);
+		$requestedPlz = (string)$this->request->getParam('plz', $prefs['plz']);
+		$requestedWeek = (string)$this->request->getParam('week', $prefs['week']);
 		$this->rateLimit->assertAllowed($uid, 'offers_refresh', 4, 3600);
 		$this->rateLimit->assertAllowed($uid, 'offers_fetch', 20, 3600);
-		$this->offers->saveUserPrefs($uid, $plz, $week);
+		// Managers may change PLZ/week and persist. Contributors may only refresh
+		// the space's saved postcode — otherwise they could probe arbitrary PLZs
+		// into the shared offer cache.
+		$plz = $prefs['plz'];
+		$week = $prefs['week'];
+		try {
+			$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_MANAGER);
+			$plz = $requestedPlz;
+			$week = $requestedWeek;
+			$this->workspaces->savePrefs($wsId, $uid, $plz, $week);
+		} catch (AccessDeniedException) {
+			// contributor: bound to saved prefs
+		}
 		$data = $this->offers->fetch($plz, $week, true);
 		$data = $this->withWeekTips($data, $plz, $week);
 		$offerList = is_array($data['offers'] ?? null) ? $data['offers'] : [];
-		$data['watch_hits'] = $this->watch->hitsForUser($uid, $offerList);
+		$data['watch_hits'] = $this->watch->hitsForUser($wsId, $uid, $offerList);
+		$data['workspaceId'] = $wsId;
+		$data['plz'] = $plz;
+		$data['week'] = $week;
 		return new JSONResponse($data);
 	}
 
 	/**
-	 * Always attach unit_price (even for older cache rows) and compare to the
-	 * other week via peekCache only — never live-fetch on GET.
-	 *
 	 * @param array<string, mixed> $data
 	 * @return array<string, mixed>
 	 */
@@ -182,13 +337,19 @@ class ApiController extends Controller {
 	#[NoAdminRequired]
 	public function settingsGet(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
 		$this->rateLimit->assertAllowed($uid, 'settings_read', 60, 3600);
-		return new JSONResponse($this->offers->getUserPrefs($uid));
+		$prefs = $this->workspaces->getPrefs($wsId, $uid);
+		$prefs['workspaceId'] = $wsId;
+		return new JSONResponse($prefs);
 	}
 
 	#[NoAdminRequired]
 	public function settingsSave(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_MANAGER);
 		$this->rateLimit->assertAllowed($uid, 'settings_write', 30, 3600);
 		$body = $this->body();
 		$plz = (string)($body['plz'] ?? '');
@@ -197,83 +358,105 @@ class ApiController extends Controller {
 		if (array_key_exists('show_images', $body)) {
 			$showImages = InputCoercion::asBool($body['show_images'], 'show_images');
 		}
-		return new JSONResponse($this->offers->saveUserPrefs($uid, $plz, $week, $showImages));
+		$prefs = $this->workspaces->savePrefs($wsId, $uid, $plz, $week, $showImages);
+		$prefs['workspaceId'] = $wsId;
+		return new JSONResponse($prefs);
 	}
 
 	#[NoAdminRequired]
 	public function listGet(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
 		$this->rateLimit->assertAllowed($uid, 'list_read', 120, 3600);
-		return new JSONResponse(['items' => $this->list->list($uid)]);
+		return new JSONResponse(['items' => $this->list->list($wsId, $uid), 'workspaceId' => $wsId]);
 	}
 
 	#[NoAdminRequired]
 	public function listAdd(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'list_write', 120, 3600);
-		$item = $this->list->add($uid, $this->body());
+		$item = $this->list->add($wsId, $uid, $this->body());
 		return new JSONResponse($item, Http::STATUS_CREATED);
 	}
 
 	#[NoAdminRequired]
 	public function listUpdate(int $id): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'list_write', 120, 3600);
-		return new JSONResponse($this->list->update($uid, $id, $this->body()));
+		return new JSONResponse($this->list->update($wsId, $uid, $id, $this->body()));
 	}
 
 	#[NoAdminRequired]
 	public function listDelete(int $id): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'list_write', 120, 3600);
-		$this->list->delete($uid, $id);
+		$this->list->delete($wsId, $uid, $id);
 		return new JSONResponse(['ok' => true]);
 	}
 
 	#[NoAdminRequired]
 	public function listClear(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'list_write', 120, 3600);
 		$store = (string)($this->request->getParam('store', '') ?? '');
-		$this->list->clear($uid, $store);
+		$this->list->clear($wsId, $uid, $store);
 		return new JSONResponse(['ok' => true]);
 	}
 
 	#[NoAdminRequired]
 	public function listExport(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
 		$this->rateLimit->assertAllowed($uid, 'list_export', 30, 3600);
 		$store = (string)($this->request->getParam('store', '') ?? '');
-		return new JSONResponse($this->list->export($uid, $store));
+		return new JSONResponse($this->list->export($wsId, $uid, $store));
 	}
 
 	#[NoAdminRequired]
 	public function watchGet(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
 		$this->rateLimit->assertAllowed($uid, 'watch_read', 120, 3600);
-		return new JSONResponse(['items' => $this->watch->list($uid)]);
+		return new JSONResponse(['items' => $this->watch->list($wsId, $uid), 'workspaceId' => $wsId]);
 	}
 
 	#[NoAdminRequired]
 	public function watchAdd(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'watch_write', 60, 3600);
-		$item = $this->watch->add($uid, $this->body());
+		$item = $this->watch->add($wsId, $uid, $this->body());
 		return new JSONResponse($item, Http::STATUS_CREATED);
 	}
 
 	#[NoAdminRequired]
 	public function watchUpdate(int $id): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'watch_write', 60, 3600);
-		return new JSONResponse($this->watch->update($uid, $id, $this->body()));
+		return new JSONResponse($this->watch->update($wsId, $uid, $id, $this->body()));
 	}
 
 	#[NoAdminRequired]
 	public function watchDelete(int $id): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_CONTRIBUTOR);
 		$this->rateLimit->assertAllowed($uid, 'watch_write', 60, 3600);
-		$this->watch->delete($uid, $id);
+		$this->watch->delete($wsId, $uid, $id);
 		return new JSONResponse(['ok' => true]);
 	}
 
@@ -322,26 +505,58 @@ class ApiController extends Controller {
 	#[NoAdminRequired]
 	public function directoryUsers(): JSONResponse {
 		$uid = $this->uid();
-		$this->accessControl->assertAppAdmin($uid);
+		$this->assertDirectoryUserSearchAllowed($uid);
 		$this->rateLimit->assertAllowed($uid, 'directory_search', 60, 60);
 		$q = (string)$this->request->getParam('q', '');
-		return new JSONResponse(['items' => $this->directory->searchUsers($q)]);
+		$full = $this->accessControl->isAppAdmin($uid);
+		return new JSONResponse([
+			'items' => $this->directory->searchUsers($q, $uid, $full),
+			'scope' => $full ? 'directory' : 'peer',
+		]);
 	}
 
 	#[NoAdminRequired]
 	public function directoryGroups(): JSONResponse {
 		$uid = $this->uid();
-		$this->accessControl->assertAppAdmin($uid);
+		$this->assertDirectoryGroupSearchAllowed($uid);
 		$this->rateLimit->assertAllowed($uid, 'directory_search', 60, 60);
 		$q = (string)$this->request->getParam('q', '');
-		return new JSONResponse(['items' => $this->directory->searchGroups($q)]);
+		return new JSONResponse(['items' => $this->directory->searchGroups($q), 'scope' => 'directory']);
+	}
+
+	private function assertDirectoryUserSearchAllowed(string $uid): void {
+		if ($this->accessControl->isAppAdmin($uid)) {
+			return;
+		}
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_MANAGER);
+	}
+
+	/**
+	 * Groups are for Standard spaces / Access policy — not private household invites.
+	 */
+	private function assertDirectoryGroupSearchAllowed(string $uid): void {
+		if ($this->accessControl->isAppAdmin($uid)) {
+			return;
+		}
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_MANAGER);
+		$privacy = $this->accessControl->privacyMode($wsId);
+		if ($privacy === AccessControlService::PRIVACY_PRIVATE) {
+			throw new AccessDeniedException();
+		}
+		if ($this->accessControl->individualMemberRole($wsId, $uid) !== AccessControlService::ROLE_MANAGER) {
+			throw new AccessDeniedException();
+		}
 	}
 
 	#[NoAdminRequired]
 	public function watchHits(): JSONResponse {
 		$uid = $this->uid();
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
 		$this->rateLimit->assertAllowed($uid, 'watch_hits', 60, 3600);
-		$prefs = $this->offers->getUserPrefs($uid);
+		$prefs = $this->workspaces->getPrefs($wsId, $uid);
 		$plz = (string)$this->request->getParam('plz', $prefs['plz']);
 		$week = (string)$this->request->getParam('week', $prefs['week']);
 		$data = $this->offers->peekCache($plz, $week);
@@ -353,13 +568,15 @@ class ApiController extends Controller {
 			);
 		}
 		$offerList = is_array($data['offers'] ?? null) ? $data['offers'] : [];
-		return new JSONResponse(['hits' => $this->watch->hitsForUser($uid, $offerList)]);
+		return new JSONResponse(['hits' => $this->watch->hitsForUser($wsId, $uid, $offerList)]);
 	}
 
 	#[NoAdminRequired]
 	public function trends(): JSONResponse {
 		$uid = $this->uid();
-		$prefs = $this->offers->getUserPrefs($uid);
+		$wsId = $this->workspaceId($uid);
+		$this->accessControl->ensureMinimumRole($wsId, $uid, AccessControlService::ROLE_VIEWER);
+		$prefs = $this->workspaces->getPrefs($wsId, $uid);
 		$plz = (string)$this->request->getParam('plz', $prefs['plz']);
 		$week = (string)$this->request->getParam('week', $prefs['week']);
 		$query = (string)$this->request->getParam('q', '');
@@ -372,9 +589,10 @@ class ApiController extends Controller {
 			$offerList = is_array($cached['offers'] ?? null) ? $cached['offers'] : [];
 			$cache = 'hit';
 		}
-		$watches = $this->watch->list($uid, true);
+		$watches = $this->watch->list($wsId, $uid, true);
 		$data = $this->history->summarize($plz, $week, $offerList, $watches, $query, $store);
 		$data['cache'] = $cache;
+		$data['workspaceId'] = $wsId;
 		return new JSONResponse($data);
 	}
 }

@@ -30,17 +30,35 @@ class WatchService {
 		private readonly IDBConnection $db,
 		private readonly WatchMatchService $match,
 		private readonly ILockingProvider $locking,
+		private readonly AccessControlService $access,
 	) {
 	}
 
 	/**
 	 * @return list<array<string, mixed>>
 	 */
-	public function list(string $userId, bool $enabledOnly = false): array {
+	public function list(int $workspaceId, string $actorUserId, bool $enabledOnly = false): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_VIEWER);
+		return $this->listRows($workspaceId, $enabledOnly);
+	}
+
+	/**
+	 * Trusted job / cron path — no ACL. Never call from HTTP handlers.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	public function listForJob(int $workspaceId, bool $enabledOnly = false): array {
+		return $this->listRows($workspaceId, $enabledOnly);
+	}
+
+	/**
+	 * @return list<array<string, mixed>>
+	 */
+	private function listRows(int $workspaceId, bool $enabledOnly = false): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from('einkaufcheck_watch')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->orderBy('id', 'ASC');
 		if ($enabledOnly) {
 			$qb->andWhere($qb->expr()->eq('enabled', $qb->createNamedParameter(1, IQueryBuilder::PARAM_INT)));
@@ -55,44 +73,34 @@ class WatchService {
 	}
 
 	/**
-	 * @return list<string>
+	 * @return list<int>
 	 */
-	public function usersWithWatches(): array {
+	public function workspaceIdsWithWatches(): array {
 		$qb = $this->db->getQueryBuilder();
-		$qb->selectDistinct('user_id')
+		$qb->selectDistinct('workspace_id')
 			->from('einkaufcheck_watch')
 			->where($qb->expr()->eq('enabled', $qb->createNamedParameter(1, IQueryBuilder::PARAM_INT)));
 		$result = $qb->executeQuery();
-		$users = [];
+		$ids = [];
 		while ($row = $result->fetch()) {
-			$users[] = (string)$row['user_id'];
+			$wid = (int)$row['workspace_id'];
+			if ($wid > 0) {
+				$ids[] = $wid;
+			}
 		}
 		$result->closeCursor();
-		return $users;
+		return $ids;
 	}
 
 	/**
 	 * @param array<string, mixed> $payload
 	 * @return array<string, mixed>
 	 */
-	public function add(string $userId, array $payload): array {
+	public function add(int $workspaceId, string $actorUserId, array $payload): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
 		$fields = $this->validatedFields($payload, null);
-		$lockKey = self::LOCK_PREFIX . md5($userId);
-		$acquired = false;
-		try {
-			$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
-			$acquired = true;
-		} catch (LockedException) {
-			usleep(50_000);
-			try {
-				$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
-				$acquired = true;
-			} catch (LockedException) {
-				throw new ValidationException('Watch list is busy. Try again.', [], 'watch_busy');
-			}
-		}
-		try {
-			if ($this->countForUser($userId) >= self::MAX_WATCHES) {
+		return $this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $actorUserId, $fields): array {
+			if ($this->countForWorkspace($workspaceId) >= self::MAX_WATCHES) {
 				throw new ValidationException(
 					'Watch list is full.',
 					['limit' => self::MAX_WATCHES],
@@ -103,7 +111,8 @@ class WatchService {
 			$qb = $this->db->getQueryBuilder();
 			$qb->insert('einkaufcheck_watch')
 				->values([
-					'user_id' => $qb->createNamedParameter($userId),
+					'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
+					'user_id' => $qb->createNamedParameter($actorUserId),
 					'query' => $qb->createNamedParameter($fields['query']),
 					'brand' => $qb->createNamedParameter($fields['brand']),
 					'store' => $qb->createNamedParameter($fields['store']),
@@ -115,97 +124,109 @@ class WatchService {
 				])
 				->executeStatement();
 			$id = (int)$this->db->lastInsertId('einkaufcheck_watch');
-			return $this->get($userId, $id);
-		} finally {
-			if ($acquired) {
-				try {
-					$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
-				} catch (\Throwable) {
-				}
-			}
-		}
+			return $this->get($workspaceId, $id);
+		});
 	}
 
 	/**
 	 * @param array<string, mixed> $payload
 	 * @return array<string, mixed>
 	 */
-	public function update(string $userId, int $id, array $payload): array {
-		$existing = $this->get($userId, $id);
-		$fields = $this->validatedFields($payload, $existing);
-		$resetHit = $fields['query'] !== (string)$existing['query']
-			|| $fields['brand'] !== (string)$existing['brand']
-			|| $fields['store'] !== (string)$existing['store']
-			|| $fields['max_price'] !== $this->decimalString($existing['max_price'])
-			|| $fields['max_per_kg'] !== $this->decimalString($existing['max_per_kg']);
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('einkaufcheck_watch')
-			->set('query', $qb->createNamedParameter($fields['query']))
-			->set('brand', $qb->createNamedParameter($fields['brand']))
-			->set('store', $qb->createNamedParameter($fields['store']))
-			->set('max_price', $qb->createNamedParameter($fields['max_price'], IQueryBuilder::PARAM_STR))
-			->set('max_per_kg', $qb->createNamedParameter($fields['max_per_kg'], IQueryBuilder::PARAM_STR))
-			->set('enabled', $qb->createNamedParameter($fields['enabled'], IQueryBuilder::PARAM_INT));
-		if ($resetHit) {
-			$qb->set('last_hit_key', $qb->createNamedParameter(''));
-		}
-		$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->executeStatement();
-		return $this->get($userId, $id);
+	public function update(int $workspaceId, string $actorUserId, int $id, array $payload): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
+		return $this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $id, $payload): array {
+			$existing = $this->get($workspaceId, $id);
+			$fields = $this->validatedFields($payload, $existing);
+			$resetHit = $fields['query'] !== (string)$existing['query']
+				|| $fields['brand'] !== (string)$existing['brand']
+				|| $fields['store'] !== (string)$existing['store']
+				|| $fields['max_price'] !== $this->decimalString($existing['max_price'])
+				|| $fields['max_per_kg'] !== $this->decimalString($existing['max_per_kg']);
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('einkaufcheck_watch')
+				->set('query', $qb->createNamedParameter($fields['query']))
+				->set('brand', $qb->createNamedParameter($fields['brand']))
+				->set('store', $qb->createNamedParameter($fields['store']))
+				->set('max_price', $qb->createNamedParameter($fields['max_price'], IQueryBuilder::PARAM_STR))
+				->set('max_per_kg', $qb->createNamedParameter($fields['max_per_kg'], IQueryBuilder::PARAM_STR))
+				->set('enabled', $qb->createNamedParameter($fields['enabled'], IQueryBuilder::PARAM_INT));
+			if ($resetHit) {
+				$qb->set('last_hit_key', $qb->createNamedParameter(''));
+			}
+			$qb->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+			return $this->get($workspaceId, $id);
+		});
 	}
 
-	public function delete(string $userId, int $id): void {
-		$qb = $this->db->getQueryBuilder();
-		$affected = $qb->delete('einkaufcheck_watch')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->executeStatement();
-		if ($affected < 1) {
-			throw new NotFoundException('Watch entry not found.');
-		}
+	public function delete(int $workspaceId, string $actorUserId, int $id): void {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
+		$this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $id): void {
+			$qb = $this->db->getQueryBuilder();
+			$affected = $qb->delete('einkaufcheck_watch')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+			if ($affected < 1) {
+				throw new NotFoundException('Watch entry not found.');
+			}
+		});
 	}
 
-	public function setLastHitKey(string $userId, int $id, string $key): void {
+	public function setLastHitKey(int $workspaceId, int $id, string $key): void {
 		$qb = $this->db->getQueryBuilder();
 		$qb->update('einkaufcheck_watch')
 			->set('last_hit_key', $qb->createNamedParameter(mb_substr($key, 0, 64)))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->executeStatement();
 	}
 
 	/**
 	 * Compare-and-swap last_hit_key so concurrent alert runs notify at most once.
 	 */
-	public function claimHitKey(string $userId, int $id, string $oldKey, string $newKey): bool {
+	public function claimHitKey(int $workspaceId, int $id, string $oldKey, string $newKey): bool {
 		$qb = $this->db->getQueryBuilder();
 		$affected = $qb->update('einkaufcheck_watch')
 			->set('last_hit_key', $qb->createNamedParameter(mb_substr($newKey, 0, 64)))
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('last_hit_key', $qb->createNamedParameter($oldKey)))
 			->executeStatement();
 		return $affected > 0;
 	}
 
 	/**
+	 * HTTP path: ACL then match. Prefer this over hitsForWorkspace from controllers.
+	 *
 	 * @param list<array<string, mixed>> $offers
 	 * @return list<array<string, mixed>>
 	 */
-	public function hitsForUser(string $userId, array $offers): array {
-		return $this->match->hits($this->list($userId, true), $offers);
+	public function hitsForUser(int $workspaceId, string $actorUserId, array $offers): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_VIEWER);
+		return $this->hitsForWorkspace($workspaceId, $offers);
+	}
+
+	/**
+	 * Job/trusted path — no ACL. Controllers must call hitsForUser instead.
+	 *
+	 * @param list<array<string, mixed>> $offers
+	 * @return list<array<string, mixed>>
+	 */
+	public function hitsForWorkspace(int $workspaceId, array $offers): array {
+		return $this->match->hits($this->listForJob($workspaceId, true), $offers);
 	}
 
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function get(string $userId, int $id): array {
+	private function get(int $workspaceId, int $id): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from('einkaufcheck_watch')
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
@@ -285,15 +306,50 @@ class WatchService {
 		return number_format($n, 2, '.', '');
 	}
 
-	private function countForUser(string $userId): int {
+	private function countForWorkspace(int $workspaceId): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*'))
 			->from('einkaufcheck_watch')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$count = (int)$result->fetchOne();
 		$result->closeCursor();
 		return $count;
+	}
+
+	/**
+	 * Serialize watch mutations per workspace. Lock keys differ from list (`ekc-li-`)
+	 * and rate-limit (`ekc-rl-`) — no cross-layer deadlock.
+	 *
+	 * @template T
+	 * @param callable(): T $fn
+	 * @return T
+	 */
+	private function withWorkspaceLock(int $workspaceId, callable $fn): mixed {
+		$lockKey = self::LOCK_PREFIX . $workspaceId;
+		$acquired = false;
+		try {
+			$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+			$acquired = true;
+		} catch (LockedException) {
+			usleep(50_000);
+			try {
+				$this->locking->acquireLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+				$acquired = true;
+			} catch (LockedException) {
+				throw new ValidationException('Watch list is busy. Try again.', [], 'watch_busy');
+			}
+		}
+		try {
+			return $fn();
+		} finally {
+			if ($acquired) {
+				try {
+					$this->locking->releaseLock($lockKey, ILockingProvider::LOCK_EXCLUSIVE);
+				} catch (\Throwable) {
+				}
+			}
+		}
 	}
 
 	private function decimalString(mixed $value): ?string {

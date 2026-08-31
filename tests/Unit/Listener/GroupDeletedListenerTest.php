@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace OCA\EinkaufCheck\Tests\Unit\Listener;
 
 use OCA\EinkaufCheck\Listener\GroupDeletedListener;
-use OCA\EinkaufCheck\Service\SettingsService;
+use OCA\EinkaufCheck\Service\AccessControlService;
 use OCP\EventDispatcher\Event;
 use OCP\Group\Events\GroupDeletedEvent;
 use OCP\IGroup;
@@ -13,41 +13,41 @@ use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 
 class GroupDeletedListenerTest extends TestCase {
-	public function testHandleStripsGid(): void {
-		$settings = $this->createMock(SettingsService::class);
-		$settings->expects($this->once())->method('removeGroupFromLists')->with('einkauf');
+	public function testHandlePurgesGid(): void {
+		$access = $this->createMock(AccessControlService::class);
+		$access->expects($this->once())->method('purgeGroup')->with('einkauf');
 		$group = $this->createMock(IGroup::class);
 		$group->method('getGID')->willReturn('einkauf');
 
-		$listener = new GroupDeletedListener($settings, $this->createMock(LoggerInterface::class));
+		$listener = new GroupDeletedListener($access, $this->createMock(LoggerInterface::class));
 		$listener->handle(new GroupDeletedEvent($group));
 	}
 
 	public function testIgnoresForeignEvents(): void {
-		$settings = $this->createMock(SettingsService::class);
-		$settings->expects($this->never())->method('removeGroupFromLists');
-		$listener = new GroupDeletedListener($settings, $this->createMock(LoggerInterface::class));
+		$access = $this->createMock(AccessControlService::class);
+		$access->expects($this->never())->method('purgeGroup');
+		$listener = new GroupDeletedListener($access, $this->createMock(LoggerInterface::class));
 		$listener->handle(new Event());
 	}
 
 	public function testSwallowsCleanupFailures(): void {
-		$settings = $this->createMock(SettingsService::class);
-		$settings->method('removeGroupFromLists')->willThrowException(new \RuntimeException('db down'));
+		$access = $this->createMock(AccessControlService::class);
+		$access->method('purgeGroup')->willThrowException(new \RuntimeException('db down'));
 		$logger = $this->createMock(LoggerInterface::class);
 		$logger->expects($this->once())->method('warning');
 		$group = $this->createMock(IGroup::class);
 		$group->method('getGID')->willReturn('einkauf');
 
-		$listener = new GroupDeletedListener($settings, $logger);
+		$listener = new GroupDeletedListener($access, $logger);
 		$listener->handle(new GroupDeletedEvent($group));
 	}
 
 	public function testEmptyGidIsIgnored(): void {
-		$settings = $this->createMock(SettingsService::class);
-		$settings->expects($this->never())->method('removeGroupFromLists');
+		$access = $this->createMock(AccessControlService::class);
+		$access->expects($this->never())->method('purgeGroup');
 		$group = $this->createMock(IGroup::class);
 		$group->method('getGID')->willReturn('');
-		$listener = new GroupDeletedListener($settings, $this->createMock(LoggerInterface::class));
+		$listener = new GroupDeletedListener($access, $this->createMock(LoggerInterface::class));
 		$listener->handle(new GroupDeletedEvent($group));
 	}
 }

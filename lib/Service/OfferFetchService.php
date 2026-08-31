@@ -52,47 +52,6 @@ class OfferFetchService {
 	}
 
 	/**
-	 * @return array{plz: string, week: string, show_images: bool}
-	 */
-	public function getUserPrefs(string $userId): array {
-		$plz = $this->config->getUserValue($userId, Application::APP_ID, 'plz', '24149');
-		$week = $this->config->getUserValue($userId, Application::APP_ID, 'week', 'current');
-		if (!preg_match('/^\d{5}$/', $plz)) {
-			$plz = '24149';
-		}
-		if (!in_array($week, self::WEEKS, true)) {
-			$week = 'current';
-		}
-		$show = $this->config->getUserValue($userId, Application::APP_ID, 'show_images', '0');
-		return [
-			'plz' => $plz,
-			'week' => $week,
-			'show_images' => $show === '1',
-		];
-	}
-
-	/**
-	 * Persist PLZ/week. $showImages null means leave the existing pictures toggle alone
-	 * so Offers/Trends PUT {plz, week} cannot wipe it.
-	 *
-	 * @return array{plz: string, week: string, show_images: bool}
-	 */
-	public function saveUserPrefs(string $userId, string $plz, string $week, ?bool $showImages = null): array {
-		$this->assertPlzAndWeek($plz, $week);
-		$this->config->setUserValue($userId, Application::APP_ID, 'plz', $plz);
-		$this->config->setUserValue($userId, Application::APP_ID, 'week', $week);
-		if ($showImages !== null) {
-			$this->config->setUserValue(
-				$userId,
-				Application::APP_ID,
-				'show_images',
-				$showImages ? '1' : '0',
-			);
-		}
-		return $this->getUserPrefs($userId);
-	}
-
-	/**
 	 * Return a cached payload or null. Never starts a live Python fetch
 	 * and never waits on the fetch lock. GET handlers must use this.
 	 *

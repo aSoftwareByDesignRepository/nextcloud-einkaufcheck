@@ -10,10 +10,12 @@ declare(strict_types=1);
 namespace OCA\EinkaufCheck\Controller;
 
 use OCA\EinkaufCheck\AppInfo\Application;
+use OCA\EinkaufCheck\Exception\AccessDeniedException;
 use OCA\EinkaufCheck\Exception\NotFoundException;
 use OCA\EinkaufCheck\Service\AccessControlService;
 use OCA\EinkaufCheck\Service\OfferFetchService;
 use OCA\EinkaufCheck\Service\SettingsSectionCatalog;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
@@ -34,6 +36,7 @@ class PageController extends Controller {
 		private readonly IURLGenerator $urlGenerator,
 		private readonly IUserSession $userSession,
 		private readonly AccessControlService $access,
+		private readonly WorkspaceService $workspaces,
 		private readonly IConfig $config,
 		private readonly IL10N $l10n,
 		private readonly IAppManager $appManager,
@@ -86,19 +89,39 @@ class PageController extends Controller {
 				),
 			);
 		}
+		$workspace = $this->resolveWorkspace($uid);
+		$canManage = $this->canManageWorkspace($workspace);
+		if ($this->settingsCatalog->isManagerOnly($section) && !$canManage) {
+			return new RedirectResponse(
+				$this->urlGenerator->linkToRoute(
+					'einkaufcheck.page.settings',
+					['section' => SettingsSectionCatalog::DEFAULT_SECTION],
+				),
+			);
+		}
 		return $this->page(
 			'settings',
 			$this->settingsCatalog->label($this->l10n, $section),
 			$this->settingsCatalog->help($this->l10n, $section),
 			$section,
+			$workspace,
 		);
 	}
 
-	private function page(string $pageId, string $title, string $hint, string $settingsSection = ''): TemplateResponse {
+	/**
+	 * @param array<string, mixed>|null $workspace
+	 */
+	private function page(
+		string $pageId,
+		string $title,
+		string $hint,
+		string $settingsSection = '',
+		?array $workspace = null,
+	): TemplateResponse {
 		if ($pageId === 'settings' && $settingsSection !== '' && !$this->settingsCatalog->isSection($settingsSection)) {
 			throw new NotFoundException('Settings section not found.');
 		}
-		$this->registerAssets();
+		$this->registerAssets($pageId, $settingsSection);
 		$uid = $this->requireUid();
 		$isAppAdmin = $this->access->isAppAdmin($uid);
 		$isSystemAdmin = $uid !== '' && $this->groupManager->isAdmin($uid);
@@ -106,16 +129,23 @@ class PageController extends Controller {
 		if ($timezone === '') {
 			$timezone = 'UTC';
 		}
+		if ($workspace === null) {
+			$workspace = $this->resolveWorkspace($uid);
+		}
+		$canManageWorkspace = $this->canManageWorkspace($workspace);
+		$workspaceRole = is_array($workspace) ? (string)($workspace['role'] ?? '') : '';
 		$u = $this->urlGenerator;
 		$pageUrls = [
 			'offers' => $u->linkToRoute('einkaufcheck.page.index'),
 			'trends' => $u->linkToRoute('einkaufcheck.page.trends'),
 			'settings' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'general']),
+			'settingsWorkspace' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'workspace']),
+			'settingsMembers' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'members']),
 			'settingsStores' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'stores']),
 			'settingsAccess' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'access']),
 		];
 		$settingsNav = [];
-		foreach ($this->settingsCatalog->visibleSections($isAppAdmin) as $slug) {
+		foreach ($this->settingsCatalog->visibleSections($isAppAdmin, $canManageWorkspace) as $slug) {
 			$settingsNav[] = [
 				'slug' => $slug,
 				'url' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => $slug]),
@@ -145,6 +175,20 @@ class PageController extends Controller {
 			'accessSave' => $u->linkToRoute('einkaufcheck.api.accessSave'),
 			'directoryUsers' => $u->linkToRoute('einkaufcheck.api.directoryUsers'),
 			'directoryGroups' => $u->linkToRoute('einkaufcheck.api.directoryGroups'),
+			'workspaces' => $u->linkToRoute('einkaufcheck.api.workspacesList'),
+			'workspacesCreate' => $u->linkToRoute('einkaufcheck.api.workspacesCreate'),
+			'workspaceGetBase' => $u->linkToRoute('einkaufcheck.api.workspaceGet', ['id' => 0]),
+			'workspaceUpdateBase' => $u->linkToRoute('einkaufcheck.api.workspaceUpdate', ['id' => 0]),
+			'workspaceDeleteBase' => $u->linkToRoute('einkaufcheck.api.workspaceDelete', ['id' => 0]),
+			'settingsWorkspace' => $u->linkToRoute('einkaufcheck.page.settings', ['section' => 'workspace']),
+			'appIndex' => $u->linkToRoute('einkaufcheck.page.index'),
+			'workspaceMembersBase' => $u->linkToRoute('einkaufcheck.api.workspaceMembers', ['id' => 0]),
+			'workspaceAddMemberBase' => $u->linkToRoute('einkaufcheck.api.workspaceAddMember', ['id' => 0]),
+			'memberUpdateBase' => $u->linkToRoute('einkaufcheck.api.memberUpdate', ['id' => 0]),
+			'memberDeleteBase' => $u->linkToRoute('einkaufcheck.api.memberDelete', ['id' => 0]),
+			'workspaceAddGroupMemberBase' => $u->linkToRoute('einkaufcheck.api.workspaceAddGroupMember', ['id' => 0]),
+			'groupMemberUpdateBase' => $u->linkToRoute('einkaufcheck.api.groupMemberUpdate', ['id' => 0]),
+			'groupMemberDeleteBase' => $u->linkToRoute('einkaufcheck.api.groupMemberDelete', ['id' => 0]),
 			'pages' => $pageUrls,
 		];
 		$template = match ($pageId) {
@@ -156,6 +200,12 @@ class PageController extends Controller {
 			'settings' => $this->settingsCatalog->headerIcon($settingsSection),
 			'trends' => 'trending-down',
 			default => 'shopping-cart',
+		};
+		$roleLabel = match ($workspaceRole) {
+			AccessControlService::ROLE_MANAGER => $this->l10n->t('Manager'),
+			AccessControlService::ROLE_CONTRIBUTOR => $this->l10n->t('Contributor'),
+			AccessControlService::ROLE_VIEWER => $this->l10n->t('Viewer'),
+			default => $isAppAdmin ? $this->l10n->t('App admin') : $this->l10n->t('Member'),
 		};
 		$params = [
 			'pageId' => $pageId,
@@ -171,7 +221,12 @@ class PageController extends Controller {
 			'appVersion' => $this->appManager->getAppVersion(Application::APP_ID),
 			'urls' => $urls,
 			'urlsJson' => json_encode($urls, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}',
-			'roleLabel' => $isAppAdmin ? $this->l10n->t('App admin') : $this->l10n->t('Member'),
+			'roleLabel' => $roleLabel,
+			'workspace' => $workspace,
+			'workspaceJson' => json_encode($workspace ?? new \stdClass(), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?: '{}',
+			'canManageWorkspace' => $canManageWorkspace,
+			'canManagePrivacy' => !empty($workspace['capabilities']['canManagePrivacy']),
+			'canDeleteWorkspace' => !empty($workspace['capabilities']['canDelete']),
 			'storesStatus' => [],
 		];
 		if ($pageId === 'settings' && $settingsSection === 'stores') {
@@ -180,12 +235,51 @@ class PageController extends Controller {
 		return new TemplateResponse(Application::APP_ID, $template, $params);
 	}
 
-	private function registerAssets(): void {
+	private function registerAssets(string $pageId, string $settingsSection): void {
 		Util::addTranslations(Application::APP_ID);
 		Util::addStyle(Application::APP_ID, 'app');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/messaging');
+		Util::addScript(Application::APP_ID, 'common/workspace');
 		Util::addScript(Application::APP_ID, 'app');
+		if ($pageId === 'settings' && in_array($settingsSection, ['workspace', 'members'], true)) {
+			Util::addScript(Application::APP_ID, 'settings-workspace');
+		}
+	}
+
+	/**
+	 * @return array<string, mixed>|null
+	 */
+	private function resolveWorkspace(string $uid): ?array {
+		if ($uid === '') {
+			return null;
+		}
+		try {
+			$raw = $this->request->getParam('workspaceId');
+			$wid = (int)($raw ?? 0);
+			if ($wid > 0) {
+				return $this->workspaces->getForUser($wid, $uid);
+			}
+			$last = $this->access->lastUsedWorkspace($uid);
+			if ($last !== null && $this->access->role($last, $uid) !== null) {
+				return $this->workspaces->getForUser($last, $uid);
+			}
+			return $this->workspaces->ensurePersonalWorkspace($uid);
+		} catch (AccessDeniedException) {
+			return null;
+		}
+	}
+
+	/**
+	 * @param array<string, mixed>|null $workspace
+	 */
+	private function canManageWorkspace(?array $workspace): bool {
+		if ($workspace === null) {
+			return false;
+		}
+		$caps = is_array($workspace['capabilities'] ?? null) ? $workspace['capabilities'] : [];
+		return !empty($caps['canManageSettings'])
+			|| (string)($workspace['role'] ?? '') === AccessControlService::ROLE_MANAGER;
 	}
 
 	private function requireUid(): string {

@@ -6,6 +6,7 @@
     "e2e": "playwright test --workers=1",
     "e2e:a11y": "playwright test e2e/a11y-smoke.spec.js --workers=1",
     "e2e:theme": "playwright test e2e/theme-responsive-a11y.spec.js --workers=1",
+    "e2e:visual": "playwright test e2e/visual-regression.spec.js --workers=1",
     "e2e:pictures": "playwright test e2e/pictures-journey.spec.js --workers=1",
     "e2e:offers": "playwright test e2e/offers-journey.spec.js --workers=1",
     "e2e:install": "playwright install chromium",

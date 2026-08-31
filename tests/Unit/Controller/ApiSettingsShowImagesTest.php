@@ -15,6 +15,7 @@ use OCA\EinkaufCheck\Service\SettingsService;
 use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -22,12 +23,12 @@ use PHPUnit\Framework\TestCase;
 
 class ApiSettingsShowImagesTest extends TestCase {
 	public function testOmittedShowImagesPassesNullSoToggleIsPreserved(): void {
-		$offers = $this->createMock(OfferFetchService::class);
-		$offers->expects($this->once())->method('saveUserPrefs')
-			->with('alice', '24149', 'current', null)
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects($this->once())->method('savePrefs')
+			->with(1, 'alice', '24149', 'current', null)
 			->willReturn(['plz' => '24149', 'week' => 'current', 'show_images' => true]);
 
-		$controller = $this->controller($offers, [
+		$controller = $this->controller($workspaces, [
 			'plz' => '24149',
 			'week' => 'current',
 		]);
@@ -36,12 +37,12 @@ class ApiSettingsShowImagesTest extends TestCase {
 	}
 
 	public function testFalseStringIsFalse(): void {
-		$offers = $this->createMock(OfferFetchService::class);
-		$offers->expects($this->once())->method('saveUserPrefs')
-			->with('alice', '24149', 'current', false)
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects($this->once())->method('savePrefs')
+			->with(1, 'alice', '24149', 'current', false)
 			->willReturn(['plz' => '24149', 'week' => 'current', 'show_images' => false]);
 
-		$controller = $this->controller($offers, [
+		$controller = $this->controller($workspaces, [
 			'plz' => '24149',
 			'week' => 'current',
 			'show_images' => 'false',
@@ -51,9 +52,9 @@ class ApiSettingsShowImagesTest extends TestCase {
 	}
 
 	public function testGarbageShowImagesIsRejected(): void {
-		$offers = $this->createMock(OfferFetchService::class);
-		$offers->expects($this->never())->method('saveUserPrefs');
-		$controller = $this->controller($offers, [
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->expects($this->never())->method('savePrefs');
+		$controller = $this->controller($workspaces, [
 			'plz' => '24149',
 			'week' => 'current',
 			'show_images' => 'maybe',
@@ -65,13 +66,35 @@ class ApiSettingsShowImagesTest extends TestCase {
 	/**
 	 * @param array<string, mixed> $params
 	 */
-	private function controller(OfferFetchService $offers, array $params): ApiController {
+	private function controller(WorkspaceService $workspaces, array $params): ApiController {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('alice');
 		$session = $this->createMock(IUserSession::class);
 		$session->method('getUser')->willReturn($user);
 		$access = $this->createMock(AccessControlService::class);
 		$access->method('assertCanUseApp');
+		$access->method('lastUsedWorkspace')->willReturn(1);
+		$access->method('role')->willReturn(AccessControlService::ROLE_MANAGER);
+		$access->method('ensureMinimumRole')->willReturn(AccessControlService::ROLE_MANAGER);
+		$ws = [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_MANAGER,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => true,
+			],
+		];
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+		$workspaces->method('getPrefs')->willReturn([
+			'plz' => '24149',
+			'week' => 'current',
+			'show_images' => false,
+		]);
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->method('assertAllowed');
 		$request = $this->createMock(IRequest::class);
@@ -79,7 +102,7 @@ class ApiSettingsShowImagesTest extends TestCase {
 
 		return new ApiController(
 			$request,
-			$offers,
+			$this->createMock(OfferFetchService::class),
 			$this->createMock(ShoppingListService::class),
 			$this->createMock(WatchService::class),
 			$session,
@@ -89,6 +112,7 @@ class ApiSettingsShowImagesTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 	}
 }

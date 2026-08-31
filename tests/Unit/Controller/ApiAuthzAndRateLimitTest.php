@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace OCA\EinkaufCheck\Tests\Unit\Controller;
 
 use OCA\EinkaufCheck\Controller\ApiController;
+use OCA\EinkaufCheck\Exception\AccessDeniedException;
 use OCA\EinkaufCheck\Exception\AppAccessDeniedException;
 use OCA\EinkaufCheck\Service\AccessControlService;
 use OCA\EinkaufCheck\Service\DirectorySearchService;
@@ -15,6 +16,7 @@ use OCA\EinkaufCheck\Service\SettingsService;
 use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
@@ -43,14 +45,39 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$controller->accessSave();
 	}
 
-	public function testDirectoryRejectedForNonAdmin(): void {
+	public function testDirectoryRejectedForNonManagerNonAdmin(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('victim');
+		$session = $this->createMock(IUserSession::class);
+		$session->method('getUser')->willReturn($user);
+
 		$access = $this->createMock(AccessControlService::class);
 		$access->method('assertCanUseApp');
-		$access->expects($this->once())->method('assertAppAdmin')->with('victim')
-			->willThrowException(new AppAccessDeniedException('App administrator required.'));
+		$access->method('isAppAdmin')->with('victim')->willReturn(false);
+		$access->method('lastUsedWorkspace')->willReturn(1);
+		$access->method('role')->willReturn(AccessControlService::ROLE_VIEWER);
+		$access->expects($this->once())->method('ensureMinimumRole')
+			->with(1, 'victim', AccessControlService::ROLE_MANAGER)
+			->willThrowException(new AccessDeniedException());
 
-		$controller = $this->controller('victim', $access, $this->createMock(RateLimitService::class));
-		$this->expectException(AppAccessDeniedException::class);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$workspaces->method('getForUser')->willReturn($this->defaultWorkspace());
+
+		$controller = new ApiController(
+			$this->createMock(IRequest::class),
+			$this->createMock(OfferFetchService::class),
+			$this->createMock(ShoppingListService::class),
+			$this->createMock(WatchService::class),
+			$session,
+			$this->createMock(RateLimitService::class),
+			$access,
+			$this->createMock(SettingsService::class),
+			$this->createMock(DirectorySearchService::class),
+			$this->createMock(PriceHistoryService::class),
+			$this->createMock(WeekCompareService::class),
+			$workspaces,
+		);
+		$this->expectException(AccessDeniedException::class);
 		$controller->directoryUsers();
 	}
 
@@ -58,7 +85,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->expects($this->once())->method('assertAllowed')->with('alice', 'list_export', 30, 3600);
 		$list = $this->createMock(ShoppingListService::class);
-		$list->expects($this->once())->method('export')->with('alice', '')->willReturn([
+		$list->expects($this->once())->method('export')->with(1, 'alice', '')->willReturn([
 			'text' => 'Einkaufszettel',
 			'whatsapp_url' => 'https://wa.me/?text=',
 			'csv' => "store;brand;name\n",
@@ -78,7 +105,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->expects($this->once())->method('assertAllowed')->with('alice', 'list_write', 120, 3600);
 		$list = $this->createMock(ShoppingListService::class);
-		$list->expects($this->once())->method('clear')->with('alice', 'Lidl');
+		$list->expects($this->once())->method('clear')->with(1, 'alice', 'Lidl');
 
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('alice');
@@ -93,6 +120,9 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			}
 		);
 
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
+
 		$controller = new ApiController(
 			$request,
 			$this->createMock(OfferFetchService::class),
@@ -105,6 +135,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 		$controller->listClear();
 	}
@@ -113,9 +144,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->expects($this->once())->method('assertAllowed')->with('alice', 'trends_read', 60, 3600);
 		$offers = $this->createMock(OfferFetchService::class);
-		$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current']);
 		$offers->expects($this->never())->method('fetch');
-		$offers->expects($this->never())->method('saveUserPrefs');
 		$offers->method('peekCache')->willReturn(null);
 		$history = $this->createMock(PriceHistoryService::class);
 		$history->method('summarize')->willReturn([
@@ -141,6 +170,9 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			}
 		);
 
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
+
 		$controller = new ApiController(
 			$request,
 			$offers,
@@ -153,6 +185,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$history,
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 		$controller->trends();
 	}
@@ -161,7 +194,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->expects($this->once())->method('assertAllowed')->with('alice', 'list_read', 120, 3600);
 		$list = $this->createMock(ShoppingListService::class);
-		$list->expects($this->once())->method('list')->with('alice')->willReturn([]);
+		$list->expects($this->once())->method('list')->with(1, 'alice')->willReturn([]);
 		$this->controller('alice', $this->createMock(AccessControlService::class), $rl, $list)->listGet();
 	}
 
@@ -169,7 +202,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$rl = $this->createMock(RateLimitService::class);
 		$rl->expects($this->once())->method('assertAllowed')->with('alice', 'watch_read', 120, 3600);
 		$watch = $this->createMock(WatchService::class);
-		$watch->expects($this->once())->method('list')->with('alice')->willReturn([]);
+		$watch->expects($this->once())->method('list')->with(1, 'alice')->willReturn([]);
 
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('alice');
@@ -177,6 +210,8 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$session->method('getUser')->willReturn($user);
 		$access = $this->createMock(AccessControlService::class);
 		$access->method('assertCanUseApp');
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
 
 		$controller = new ApiController(
 			$this->createMock(IRequest::class),
@@ -190,6 +225,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 		$controller->watchGet();
 	}
@@ -202,7 +238,6 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 				$calls[] = [$uid, $action, $limit, $window];
 			});
 		$offers = $this->createMock(OfferFetchService::class);
-		$offers->method('getUserPrefs')->willReturn(['plz' => '24149', 'week' => 'current', 'show_images' => false]);
 		$offers->method('storesStatus')->willReturn(['ALDI Nord' => ['ok' => true]]);
 
 		$user = $this->createMock(IUser::class);
@@ -211,6 +246,8 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$session->method('getUser')->willReturn($user);
 		$access = $this->createMock(AccessControlService::class);
 		$access->method('assertCanUseApp');
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
 
 		$controller = new ApiController(
 			$this->createMock(IRequest::class),
@@ -224,6 +261,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 		$controller->settingsGet();
 		$controller->storesStatus();
@@ -254,6 +292,8 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		$user->method('getUID')->willReturn('admin');
 		$session = $this->createMock(IUserSession::class);
 		$session->method('getUser')->willReturn($user);
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($workspaces, $access);
 
 		$controller = new ApiController(
 			$this->createMock(IRequest::class),
@@ -267,6 +307,7 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 		$controller->accessGet();
 	}
@@ -276,12 +317,16 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 		AccessControlService $access,
 		RateLimitService $rl,
 		?ShoppingListService $list = null,
+		?WorkspaceService $workspaces = null,
 	): ApiController {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn($uid);
 		$session = $this->createMock(IUserSession::class);
 		$session->method('getUser')->willReturn($user);
 		$access->method('assertCanUseApp');
+
+		$ws = $workspaces ?? $this->createMock(WorkspaceService::class);
+		$this->wireWorkspaceDefaults($ws, $access);
 
 		return new ApiController(
 			$this->createMock(IRequest::class),
@@ -295,6 +340,39 @@ class ApiAuthzAndRateLimitTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$ws,
 		);
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private function defaultWorkspace(): array {
+		return [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_MANAGER,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => true,
+			],
+		];
+	}
+
+	private function wireWorkspaceDefaults(WorkspaceService $workspaces, AccessControlService $access): void {
+		$ws = $this->defaultWorkspace();
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+		$workspaces->method('getPrefs')->willReturn([
+			'plz' => '24149',
+			'week' => 'current',
+			'show_images' => false,
+		]);
+		$access->method('lastUsedWorkspace')->willReturn(1);
+		$access->method('role')->willReturn(AccessControlService::ROLE_MANAGER);
+		$access->method('ensureMinimumRole')->willReturn(AccessControlService::ROLE_MANAGER);
 	}
 }

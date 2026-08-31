@@ -15,6 +15,12 @@
 	const urls = JSON.parse(root.dataset.ekcUrls || '{}');
 	const page = root.dataset.ekcPage || 'offers';
 	const isAppAdmin = root.dataset.ekcIsAppAdmin === '1';
+	const canEditList = root.dataset.ekcCanEditList !== '0';
+	const canManageSettings = root.dataset.ekcCanManageSettings === '1';
+	const bootWorkspaceId = parseInt(root.dataset.ekcWorkspaceId || '0', 10) || 0;
+	if (api && bootWorkspaceId > 0 && typeof api.setWorkspaceId === 'function') {
+		api.setWorkspaceId(bootWorkspaceId);
+	}
 
 	const state = {
 		offers: [],
@@ -31,6 +37,59 @@
 	let offersAbort = null;
 
 	const $ = (id) => document.getElementById(id);
+	function assertCanEdit() {
+		if (canEditList) {
+			return true;
+		}
+		if (msg && typeof msg.error === 'function') {
+			msg.error(t(APP, 'You can look at this list, but only contributors or managers can change it.'));
+		} else if (msg && typeof msg.announce === 'function') {
+			msg.announce(t(APP, 'You can look at this list, but only contributors or managers can change it.'), 'error');
+		}
+		return false;
+	}
+	function assertCanManageSettings() {
+		if (canManageSettings) {
+			return true;
+		}
+		if (msg && typeof msg.error === 'function') {
+			msg.error(t(APP, 'Only managers can change shopping-space settings.'));
+		} else if (msg && typeof msg.announce === 'function') {
+			msg.announce(t(APP, 'Only managers can change shopping-space settings.'), 'error');
+		}
+		return false;
+	}
+	function applyViewerChrome() {
+		if (!canEditList) {
+			root.classList.add('ekc-app--readonly');
+		}
+		if (!canManageSettings) {
+			root.classList.add('ekc-app--settings-locked');
+			const pref = document.getElementById('ekc-pref-form');
+			if (pref) {
+				pref.querySelectorAll('input, select, button').forEach((el) => {
+					el.disabled = true;
+				});
+			}
+			// Postcode/week are space settings — contributors refresh the saved
+			// PLZ only (server-enforced). Lock the fields so the UI matches.
+			['ekc-plz', 'ekc-week', 'ekc-settings-plz', 'ekc-settings-week'].forEach((id) => {
+				const el = $(id);
+				if (el) {
+					el.disabled = true;
+					el.setAttribute('aria-readonly', 'true');
+				}
+			});
+			const help = $('ekc-plz-help');
+			if (help) {
+				help.textContent = t(APP, 'Only managers can change the postcode. Refresh still updates this space’s saved offers.');
+			}
+			const intro = document.querySelector('.ekc-filter-panel__intro');
+			if (intro && (page === 'offers' || page === 'trends')) {
+				intro.textContent = t(APP, 'Search and filter this space’s offers. Only managers can change the postcode or week.');
+			}
+		}
+	}
 	const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
 		'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
 	}[c]));
@@ -660,6 +719,10 @@
 				</div>
 				<button type="button" class="ekc-btn ekc-btn--ghost ekc-item-remove" aria-label="${esc(t(APP, 'Remove') + ': ' + title)}">×</button>`;
 			li.querySelector('input').addEventListener('change', async (e) => {
+				if (!assertCanEdit()) {
+					e.target.checked = item.checked;
+					return;
+				}
 				if (listBusy.has(item.id)) {
 					e.target.checked = item.checked;
 					return;
@@ -677,6 +740,9 @@
 			});
 			li.querySelectorAll('.ekc-qty__btn').forEach((btn) => {
 				btn.addEventListener('click', async () => {
+					if (!assertCanEdit()) {
+						return;
+					}
 					if (listBusy.has(item.id)) {
 						return;
 					}
@@ -697,6 +763,9 @@
 				});
 			});
 			li.querySelector('.ekc-item-remove').addEventListener('click', async () => {
+				if (!assertCanEdit()) {
+					return;
+				}
 				if (listBusy.has(item.id)) {
 					return;
 				}
@@ -775,6 +844,9 @@
 	}
 
 	async function addToList(o) {
+		if (!assertCanEdit()) {
+			return;
+		}
 		const key = [o.store, o.brand, o.name, o.pack, o.price].join('|');
 		if (addBusy.has(key)) {
 			return;
@@ -800,7 +872,9 @@
 	}
 
 	function fillWatchFromOffer(o) {
-		const name = String(o.name || '').replace(/\d+(?:[.,]\d+)?\s*(?:kg|g|l|ml|%|er)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+		if (!assertCanEdit()) {
+			return;
+		}		const name = String(o.name || '').replace(/\d+(?:[.,]\d+)?\s*(?:kg|g|l|ml|%|er)\b/gi, ' ').replace(/\s+/g, ' ').trim();
 		let q = name || o.name;
 		if (String(q).trim().length < 3) {
 			q = String(o.name || o.brand || '').trim();
@@ -870,6 +944,12 @@
 			state.weekCompare = data.week_compare && typeof data.week_compare === 'object'
 				? data.week_compare
 				: null;
+			if (data.plz && $('ekc-plz')) {
+				$('ekc-plz').value = String(data.plz);
+			}
+			if (data.week && $('ekc-week')) {
+				$('ekc-week').value = String(data.week);
+			}
 			syncOffersTitle();
 			updateWeekCompareHint();
 			$('ekc-stats').innerHTML = [
@@ -970,14 +1050,16 @@
 				$('ekc-plz')?.focus();
 				return;
 			}
-			try {
-				await api.put(urls.settingsSave, {
-					plz: ($('ekc-plz')?.value || '').trim(),
-					week: $('ekc-week')?.value || 'current',
-				});
-			} catch (err) {
-				msg.handleApiError(err);
-				return;
+			if (canManageSettings) {
+				try {
+					await api.put(urls.settingsSave, {
+						plz: ($('ekc-plz')?.value || '').trim(),
+						week: $('ekc-week')?.value || 'current',
+					});
+				} catch (err) {
+					msg.handleApiError(err);
+					return;
+				}
 			}
 			loadOffers(false);
 		});
@@ -1010,7 +1092,9 @@
 
 		$('ekc-watch-form').addEventListener('submit', async (e) => {
 			e.preventDefault();
-			const submit = $('ekc-watch-form').querySelector('button[type="submit"]');
+			if (!assertCanEdit()) {
+				return;
+			}			const submit = $('ekc-watch-form').querySelector('button[type="submit"]');
 			if (submit && submit.disabled) {
 				return;
 			}
@@ -1121,7 +1205,9 @@
 			});
 		});
 		$('ekc-clear').addEventListener('click', async () => {
-			if (listClearBusy || !window.confirm(emptyListConfirm())) {
+			if (!assertCanEdit()) {
+				return;
+			}			if (listClearBusy || !window.confirm(emptyListConfirm())) {
 				return;
 			}
 			listClearBusy = true;
@@ -1288,6 +1374,9 @@
 		await loadUserPrefs();
 		$('ekc-pref-form')?.addEventListener('submit', async (e) => {
 			e.preventDefault();
+			if (!assertCanManageSettings()) {
+				return;
+			}
 			const plz = $('ekc-settings-plz').value.trim();
 			if (!validPlz(plz)) {
 				$('ekc-settings-plz').setAttribute('aria-invalid', 'true');
@@ -1650,14 +1739,16 @@
 				$('ekc-plz')?.focus();
 				return;
 			}
-			try {
-				await api.put(urls.settingsSave, {
-					plz: ($('ekc-plz')?.value || '').trim(),
-					week: $('ekc-week')?.value || 'current',
-				});
-			} catch (err) {
-				msg.handleApiError(err);
-				return;
+			if (canManageSettings) {
+				try {
+					await api.put(urls.settingsSave, {
+						plz: ($('ekc-plz')?.value || '').trim(),
+						week: $('ekc-week')?.value || 'current',
+					});
+				} catch (err) {
+					msg.handleApiError(err);
+					return;
+				}
 			}
 			loadTrends();
 		});
@@ -1673,6 +1764,8 @@
 		$('ekc-trends-retry')?.addEventListener('click', () => loadTrends());
 		$('ekc-plz')?.addEventListener('input', markPlzValidity);
 	}
+
+	applyViewerChrome();
 
 	if (page === 'offers') {
 		bindOffersPage();

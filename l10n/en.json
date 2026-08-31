@@ -271,5 +271,7 @@
     "Pictures come from ALDI and Lidl. We only load them when this is on.": "Pictures come from ALDI and Lidl. We only load them when this is on.",
     "Tap New prices once so pictures can show.": "Tap New prices once so pictures can show.",
     "Product pictures": "Product pictures",
-    "Only an EinkaufCheck administrator may do that.": "Only an EinkaufCheck administrator may do that."
+    "Only an EinkaufCheck administrator may do that.": "Only an EinkaufCheck administrator may do that.",
+    "Only managers can change the postcode. Refresh still updates this space’s saved offers.": "Only managers can change the postcode. Refresh still updates this space’s saved offers.",
+    "Search and filter this space’s offers. Only managers can change the postcode or week.": "Search and filter this space’s offers. Only managers can change the postcode or week."
 }, "pluralForm" : "nplurals=2; plural=(n != 1);" }

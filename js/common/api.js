@@ -1,8 +1,12 @@
+/**
+ * EinkaufCheck API client — CSRF-safe requests + shopping-space context.
+ */
 (function () {
 	'use strict';
 
 	const MUTATION = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 	const APP = 'einkaufcheck';
+	let workspaceId = 0;
 
 	function csrfToken() {
 		if (typeof window.OC !== 'undefined' && typeof OC.requestToken === 'string' && OC.requestToken !== '') {
@@ -88,11 +92,6 @@
 		params.append(key, String(value));
 	}
 
-	/**
-	 * Nextcloud CSRF reads requesttoken from GET, then POST, then the HTTP header.
-	 * JSON bodies never populate $_POST, and some Apache setups drop the custom
-	 * header — so mutating browser calls use form-urlencoded (SnackCheck pattern).
-	 */
 	function toFormBody(payload, token) {
 		const params = new URLSearchParams();
 		params.append('requesttoken', token);
@@ -107,9 +106,28 @@
 		return params.toString();
 	}
 
+	function withQuery(url, params) {
+		const u = new URL(String(url), window.location.origin);
+		Object.keys(params).forEach((key) => {
+			const val = params[key];
+			if (val === undefined || val === null || val === '') {
+				return;
+			}
+			u.searchParams.set(key, String(val));
+		});
+		return u.pathname + u.search + u.hash;
+	}
+
+	function withWorkspace(url, opts) {
+		const skip = opts && opts.skipWorkspace;
+		if (skip || workspaceId < 1) {
+			return url;
+		}
+		return withQuery(url, { workspaceId });
+	}
+
 	function withCsrfQuery(url, token) {
-		const join = String(url).indexOf('?') >= 0 ? '&' : '?';
-		return url + join + 'requesttoken=' + encodeURIComponent(token);
+		return withQuery(url, { requesttoken: token });
 	}
 
 	function errorMessage(data, fallback) {
@@ -130,9 +148,10 @@
 		const mutating = MUTATION.has(method);
 		const attempts = 2;
 		let lastErr = null;
+		const scopedUrl = withWorkspace(url, opts);
 		for (let attempt = 0; attempt < attempts; attempt++) {
 			const headers = Object.assign({ Accept: 'application/json' }, opts.headers || {});
-			let fetchUrl = url;
+			let fetchUrl = scopedUrl;
 			let fetchBody;
 			let token = csrfToken();
 			if (!token && (mutating || attempt === 0)) {
@@ -144,21 +163,22 @@
 				throw Object.assign(new Error(t(APP, 'Missing CSRF request token.')), { status: 0 });
 			}
 			if (mutating) {
+				const payload = (opts.body && typeof opts.body === 'object') ? Object.assign({}, opts.body) : {};
+				if (workspaceId > 0 && !opts.skipWorkspace && payload.workspaceId == null) {
+					payload.workspaceId = workspaceId;
+				}
 				if (method === 'POST') {
-					const payload = (opts.body && typeof opts.body === 'object') ? opts.body : {};
 					fetchBody = toFormBody(payload, token);
 					headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
 				} else {
-					fetchUrl = withCsrfQuery(url, token);
+					fetchUrl = withCsrfQuery(scopedUrl, token);
 					if (method !== 'DELETE') {
-						const payload = (opts.body && typeof opts.body === 'object') ? opts.body : {};
 						fetchBody = toFormBody(payload, token);
 						headers['Content-Type'] = 'application/x-www-form-urlencoded; charset=UTF-8';
 					}
 				}
 			} else if (token) {
-				// AppFramework CSRF runs on GET too; some proxies drop the requesttoken header.
-				fetchUrl = withCsrfQuery(url, token);
+				fetchUrl = withCsrfQuery(scopedUrl, token);
 			}
 			let response;
 			try {
@@ -197,6 +217,10 @@
 	}
 
 	window.EinkaufCheckApi = {
+		getWorkspaceId: () => workspaceId,
+		setWorkspaceId: (id) => {
+			workspaceId = Math.max(0, parseInt(id, 10) || 0);
+		},
 		get: (url, options) => request(url, Object.assign({}, options || {}, { method: 'GET' })),
 		post: (url, body, options) => request(url, Object.assign({}, options || {}, { method: 'POST', body })),
 		put: (url, body, options) => request(url, Object.assign({}, options || {}, { method: 'PUT', body })),

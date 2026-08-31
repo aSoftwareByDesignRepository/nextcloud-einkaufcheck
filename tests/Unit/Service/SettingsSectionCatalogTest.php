@@ -29,7 +29,14 @@ class SettingsSectionCatalogTest extends TestCase {
 	public function testAccessIsAdminOnly(): void {
 		self::assertTrue($this->catalog->isAdminOnly('access'));
 		self::assertFalse($this->catalog->isAdminOnly('general'));
-		self::assertSame(['general', 'stores'], $this->catalog->visibleSections(false));
+		self::assertSame(
+			['general', 'workspace', 'members', 'stores'],
+			$this->catalog->visibleSections(false, true),
+		);
+		self::assertSame(
+			['general', 'stores'],
+			$this->catalog->visibleSections(false, false),
+		);
 		self::assertSame(SettingsSectionCatalog::SECTIONS, $this->catalog->visibleSections(true));
 	}
 

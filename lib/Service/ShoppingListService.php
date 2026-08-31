@@ -25,33 +25,24 @@ class ShoppingListService {
 	public function __construct(
 		private readonly IDBConnection $db,
 		private readonly ILockingProvider $locking,
+		private readonly AccessControlService $access,
 	) {
 	}
 
 	/**
 	 * @return list<array<string, mixed>>
 	 */
-	public function list(string $userId): array {
-		$qb = $this->db->getQueryBuilder();
-		$qb->select('*')
-			->from('einkaufcheck_items')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->orderBy('checked', 'ASC')
-			->addOrderBy('id', 'ASC');
-		$result = $qb->executeQuery();
-		$rows = [];
-		while ($row = $result->fetch()) {
-			$rows[] = $this->normalize($row);
-		}
-		$result->closeCursor();
-		return $rows;
+	public function list(int $workspaceId, string $actorUserId): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_VIEWER);
+		return $this->listRows($workspaceId);
 	}
 
 	/**
 	 * @param array<string, mixed> $payload
 	 * @return array<string, mixed>
 	 */
-	public function add(string $userId, array $payload): array {
+	public function add(int $workspaceId, string $actorUserId, array $payload): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
 		$name = trim((string)($payload['name'] ?? ''));
 		if ($name === '') {
 			throw new ValidationException('Item name is required.', ['name' => 'Required'], 'item_name_required');
@@ -64,8 +55,9 @@ class ShoppingListService {
 		$price = $this->validatedDecimal($payload['price'] ?? null, 'price');
 		$perKg = $this->validatedDecimal($payload['per_kg'] ?? null, 'per_kg');
 		$note = mb_substr((string)($payload['note'] ?? ''), 0, 255);
-		return $this->withUserLock($userId, function () use ($userId, $store, $brand, $nameStored, $pack, $price, $perKg, $note, $qty): array {
-			$existing = $this->findMergeable($userId, $store, $brand, $nameStored, $pack, $price);
+		$createdBy = $actorUserId;
+		return $this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $createdBy, $store, $brand, $nameStored, $pack, $price, $perKg, $note, $qty): array {
+			$existing = $this->findMergeable($workspaceId, $store, $brand, $nameStored, $pack, $price);
 			if ($existing !== null) {
 				$next = (int)$existing['qty'] + $qty;
 				if ($next > self::MAX_QTY) {
@@ -79,11 +71,11 @@ class ShoppingListService {
 				$qb->update('einkaufcheck_items')
 					->set('qty', $qb->createNamedParameter($next, IQueryBuilder::PARAM_INT))
 					->where($qb->expr()->eq('id', $qb->createNamedParameter((int)$existing['id'], IQueryBuilder::PARAM_INT)))
-					->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+					->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 					->executeStatement();
-				return $this->get($userId, (int)$existing['id']);
+				return $this->get($workspaceId, (int)$existing['id']);
 			}
-			if ($this->countForUser($userId) >= self::MAX_ITEMS) {
+			if ($this->countForWorkspace($workspaceId) >= self::MAX_ITEMS) {
 				throw new ValidationException(
 					'Shopping list is full.',
 					['limit' => self::MAX_ITEMS],
@@ -94,7 +86,8 @@ class ShoppingListService {
 			$qb = $this->db->getQueryBuilder();
 			$qb->insert('einkaufcheck_items')
 				->values([
-					'user_id' => $qb->createNamedParameter($userId),
+					'workspace_id' => $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT),
+					'user_id' => $qb->createNamedParameter($createdBy),
 					'store' => $qb->createNamedParameter($store),
 					'brand' => $qb->createNamedParameter($brand),
 					'name' => $qb->createNamedParameter($nameStored),
@@ -108,7 +101,7 @@ class ShoppingListService {
 				])
 				->executeStatement();
 			$id = (int)$this->db->lastInsertId('einkaufcheck_items');
-			return $this->get($userId, $id);
+			return $this->get($workspaceId, $id);
 		});
 	}
 
@@ -116,45 +109,52 @@ class ShoppingListService {
 	 * @param array<string, mixed> $payload
 	 * @return array<string, mixed>
 	 */
-	public function update(string $userId, int $id, array $payload): array {
-		$existing = $this->get($userId, $id);
-		$qty = array_key_exists('qty', $payload)
-			? $this->validatedQty($payload['qty'])
-			: (int)$existing['qty'];
-		$checked = array_key_exists('checked', $payload)
-			? (InputCoercion::asBool($payload['checked'], 'checked') ? 1 : 0)
-			: ($existing['checked'] ? 1 : 0);
-		$note = array_key_exists('note', $payload)
-			? mb_substr((string)$payload['note'], 0, 255)
-			: (string)$existing['note'];
-		$qb = $this->db->getQueryBuilder();
-		$qb->update('einkaufcheck_items')
-			->set('qty', $qb->createNamedParameter($qty, IQueryBuilder::PARAM_INT))
-			->set('checked', $qb->createNamedParameter($checked, IQueryBuilder::PARAM_INT))
-			->set('note', $qb->createNamedParameter($note))
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->executeStatement();
-		return $this->get($userId, $id);
+	public function update(int $workspaceId, string $actorUserId, int $id, array $payload): array {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
+		return $this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $id, $payload): array {
+			$existing = $this->get($workspaceId, $id);
+			$qty = array_key_exists('qty', $payload)
+				? $this->validatedQty($payload['qty'])
+				: (int)$existing['qty'];
+			$checked = array_key_exists('checked', $payload)
+				? (InputCoercion::asBool($payload['checked'], 'checked') ? 1 : 0)
+				: ($existing['checked'] ? 1 : 0);
+			$note = array_key_exists('note', $payload)
+				? mb_substr((string)$payload['note'], 0, 255)
+				: (string)$existing['note'];
+			$qb = $this->db->getQueryBuilder();
+			$qb->update('einkaufcheck_items')
+				->set('qty', $qb->createNamedParameter($qty, IQueryBuilder::PARAM_INT))
+				->set('checked', $qb->createNamedParameter($checked, IQueryBuilder::PARAM_INT))
+				->set('note', $qb->createNamedParameter($note))
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+			return $this->get($workspaceId, $id);
+		});
 	}
 
-	public function delete(string $userId, int $id): void {
-		$qb = $this->db->getQueryBuilder();
-		$affected = $qb->delete('einkaufcheck_items')
-			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
-			->executeStatement();
-		if ($affected < 1) {
-			throw new NotFoundException('List item not found.');
-		}
+	public function delete(int $workspaceId, string $actorUserId, int $id): void {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
+		$this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $id): void {
+			$qb = $this->db->getQueryBuilder();
+			$affected = $qb->delete('einkaufcheck_items')
+				->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
+				->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+				->executeStatement();
+			if ($affected < 1) {
+				throw new NotFoundException('List item not found.');
+			}
+		});
 	}
 
-	public function clear(string $userId, string $storeFilter = ''): void {
+	public function clear(int $workspaceId, string $actorUserId, string $storeFilter = ''): void {
+		$this->access->ensureMinimumRole($workspaceId, $actorUserId, AccessControlService::ROLE_CONTRIBUTOR);
 		$storeFilter = self::normalizeStoreFilter($storeFilter);
-		$this->withUserLock($userId, function () use ($userId, $storeFilter): void {
+		$this->withWorkspaceLock($workspaceId, function () use ($workspaceId, $storeFilter): void {
 			$qb = $this->db->getQueryBuilder();
 			$qb->delete('einkaufcheck_items')
-				->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+				->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 			if ($storeFilter !== '') {
 				$qb->andWhere($qb->expr()->eq('store', $qb->createNamedParameter($storeFilter)));
 			}
@@ -165,9 +165,9 @@ class ShoppingListService {
 	/**
 	 * @return array{text: string, whatsapp_url: string, csv: string, items: list<array<string,mixed>>}
 	 */
-	public function export(string $userId, string $storeFilter = ''): array {
+	public function export(int $workspaceId, string $actorUserId, string $storeFilter = ''): array {
 		$storeFilter = self::normalizeStoreFilter($storeFilter);
-		$items = $this->list($userId);
+		$items = $this->list($workspaceId, $actorUserId);
 		if ($storeFilter !== '') {
 			$items = array_values(array_filter(
 				$items,
@@ -175,6 +175,25 @@ class ShoppingListService {
 			));
 		}
 		return self::formatExport($items, $storeFilter);
+	}
+
+	/**
+	 * @return list<array<string, mixed>>
+	 */
+	private function listRows(int $workspaceId): array {
+		$qb = $this->db->getQueryBuilder();
+		$qb->select('*')
+			->from('einkaufcheck_items')
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
+			->orderBy('checked', 'ASC')
+			->addOrderBy('id', 'ASC');
+		$result = $qb->executeQuery();
+		$rows = [];
+		while ($row = $result->fetch()) {
+			$rows[] = $this->normalize($row);
+		}
+		$result->closeCursor();
+		return $rows;
 	}
 
 	public static function normalizeStoreFilter(string $store): string {
@@ -277,12 +296,12 @@ class ShoppingListService {
 	/**
 	 * @return array<string, mixed>
 	 */
-	private function get(string $userId, int $id): array {
+	private function get(int $workspaceId, int $id): array {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('*')
 			->from('einkaufcheck_items')
 			->where($qb->expr()->eq('id', $qb->createNamedParameter($id, IQueryBuilder::PARAM_INT)))
-			->andWhere($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			->andWhere($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$row = $result->fetch();
 		$result->closeCursor();
@@ -313,15 +332,15 @@ class ShoppingListService {
 	}
 
 	/**
-	 * Serialize add/clear for one user so a split-trip empty cannot race a merge.
+	 * Serialize add/clear for one workspace so a split-trip empty cannot race a merge.
 	 * Lock keys differ from RateLimitService (ekc-rl-) — no deadlock across layers.
 	 *
 	 * @template T
 	 * @param callable(): T $fn
 	 * @return T
 	 */
-	private function withUserLock(string $userId, callable $fn): mixed {
-		$lockKey = self::LOCK_PREFIX . md5($userId);
+	private function withWorkspaceLock(int $workspaceId, callable $fn): mixed {
+		$lockKey = self::LOCK_PREFIX . $workspaceId;
 		$acquired = $this->acquireAddLock($lockKey);
 		try {
 			return $fn();
@@ -361,7 +380,7 @@ class ShoppingListService {
 	 * @return array{id: int, qty: int}|null
 	 */
 	private function findMergeable(
-		string $userId,
+		int $workspaceId,
 		string $store,
 		string $brand,
 		string $name,
@@ -371,7 +390,7 @@ class ShoppingListService {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select('id', 'qty')
 			->from('einkaufcheck_items')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)))
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('checked', $qb->createNamedParameter(0, IQueryBuilder::PARAM_INT)))
 			->andWhere($qb->expr()->eq('store', $qb->createNamedParameter($store)))
 			->andWhere($qb->expr()->eq('brand', $qb->createNamedParameter($brand)))
@@ -392,11 +411,11 @@ class ShoppingListService {
 		return ['id' => (int)$row['id'], 'qty' => (int)$row['qty']];
 	}
 
-	private function countForUser(string $userId): int {
+	private function countForWorkspace(int $workspaceId): int {
 		$qb = $this->db->getQueryBuilder();
 		$qb->select($qb->func()->count('*'))
 			->from('einkaufcheck_items')
-			->where($qb->expr()->eq('user_id', $qb->createNamedParameter($userId)));
+			->where($qb->expr()->eq('workspace_id', $qb->createNamedParameter($workspaceId, IQueryBuilder::PARAM_INT)));
 		$result = $qb->executeQuery();
 		$count = (int)$result->fetchOne();
 		$result->closeCursor();

@@ -7,7 +7,10 @@ namespace OCA\EinkaufCheck\Tests\Unit\Service;
 use OCA\EinkaufCheck\Exception\AppAccessDeniedException;
 use OCA\EinkaufCheck\Service\AccessControlService;
 use OCA\EinkaufCheck\Service\SettingsService;
+use OCP\IConfig;
+use OCP\IDBConnection;
 use OCP\IGroupManager;
+use OCP\IUserManager;
 use PHPUnit\Framework\TestCase;
 
 class AccessControlServiceTest extends TestCase {
@@ -18,7 +21,7 @@ class AccessControlServiceTest extends TestCase {
 		$groups->method('isAdmin')->willReturn(false);
 		$settings->method('getAppAdmins')->willReturn([]);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertTrue($acl->canUseApp('alice'));
 	}
 
@@ -31,7 +34,7 @@ class AccessControlServiceTest extends TestCase {
 		$settings->method('getAppAdmins')->willReturn([]);
 		$groups->method('isAdmin')->willReturn(false);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertFalse($acl->canUseApp('alice'));
 		$this->expectException(AppAccessDeniedException::class);
 		$acl->assertCanUseApp('alice');
@@ -46,7 +49,7 @@ class AccessControlServiceTest extends TestCase {
 		$settings->method('getAppAdmins')->willReturn(['alice']);
 		$groups->method('isAdmin')->willReturn(false);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertTrue($acl->isAppAdmin('alice'));
 		self::assertTrue($acl->canUseApp('alice'));
 	}
@@ -57,7 +60,7 @@ class AccessControlServiceTest extends TestCase {
 		$settings->method('getAppAdmins')->willReturn([]);
 		$groups->method('isAdmin')->with('root')->willReturn(true);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertTrue($acl->isAppAdmin('root'));
 		self::assertTrue($acl->canUseApp('root'));
 	}
@@ -66,7 +69,7 @@ class AccessControlServiceTest extends TestCase {
 		$settings = $this->createMock(SettingsService::class);
 		$groups = $this->createMock(IGroupManager::class);
 		$settings->method('getAccessMode')->willReturn(SettingsService::MODE_OPEN);
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertFalse($acl->canUseApp(''));
 		self::assertFalse($acl->isAppAdmin(''));
 	}
@@ -80,7 +83,7 @@ class AccessControlServiceTest extends TestCase {
 		$settings->method('getAppAdmins')->willReturn([]);
 		$groups->method('isAdmin')->willReturn(false);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertTrue($acl->canUseApp('alice'));
 		self::assertFalse($acl->canUseApp('bob'));
 	}
@@ -97,8 +100,18 @@ class AccessControlServiceTest extends TestCase {
 			static fn (string $uid, string $gid): bool => $uid === 'alice' && $gid === 'einkauf'
 		);
 
-		$acl = new AccessControlService($settings, $groups);
+		$acl = $this->acl($settings, $groups);
 		self::assertTrue($acl->canUseApp('alice'));
 		self::assertFalse($acl->canUseApp('bob'));
+	}
+
+	private function acl(SettingsService $settings, IGroupManager $groups): AccessControlService {
+		return new AccessControlService(
+			$settings,
+			$groups,
+			$this->createMock(IDBConnection::class),
+			$this->createMock(IConfig::class),
+			$this->createMock(IUserManager::class),
+		);
 	}
 }

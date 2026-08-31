@@ -25,7 +25,7 @@ require __DIR__ . '/common/page-start.php';
 
 <nav class="ekc-settings-chips" aria-label="<?php p($l->t('Settings topics')); ?>">
 	<?php foreach ($settingsNav as $item): ?>
-		<a class="ekc-chip<?php if (!empty($item['active'])) { p(' is-active'); } ?>"
+		<a class="ekc-chip ekc-settings-chip<?php if (!empty($item['active'])) { p(' is-active'); } ?>"
 			href="<?php p((string)$item['url']); ?>"
 			<?php if (!empty($item['active'])): ?>aria-current="page"<?php endif; ?>>
 			<?php p((string)$item['navLabel']); ?>

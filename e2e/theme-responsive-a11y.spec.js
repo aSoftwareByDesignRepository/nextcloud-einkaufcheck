@@ -182,9 +182,9 @@ async function assertChromeTouchTargets(page) {
 	const result = await page.evaluate(() => {
 		const nodes = [
 			...document.querySelectorAll(
-				'#app-content.ekc-app .ekc-btn--primary, #app-content.ekc-app .ekc-btn, #app-content.ekc-app .ekc-filter, #app-content.ekc-app .ekc-settings-nav__link, #app-content.ekc-app .ekc-settings-chip, #app-navigation.ekc-nav .ekc-nav__link',
+				'#app-content.ekc-app .ekc-btn--primary, #app-content.ekc-app .ekc-btn, #app-content.ekc-app .ekc-filter, #app-content.ekc-app .ekc-settings-nav__link, #app-content.ekc-app .ekc-settings-chip, #app-content.ekc-app .ekc-chip, #app-navigation.ekc-nav .ekc-nav__link, #app-content.ekc-app .ekc-danger-button',
 			),
-		].slice(0, 40);
+		].slice(0, 50);
 		const undersized = [];
 		for (const el of nodes) {
 			const style = getComputedStyle(el);
@@ -209,6 +209,64 @@ async function assertChromeTouchTargets(page) {
 		return { ok: undersized.length === 0, undersized };
 	});
 	expect(result.ok, JSON.stringify(result.undersized)).toBeTruthy();
+}
+
+/**
+ * Private badge must use main-text (not primary) so custom accents stay AA.
+ * @param {import('@playwright/test').Page} page
+ */
+async function assertPrivateBadgeThemeSafe(page) {
+	const result = await page.evaluate(() => {
+		const badge = document.querySelector('.ekc-badge--private');
+		if (!badge) {
+			return { skip: true };
+		}
+		const probe = document.createElement('span');
+		probe.style.color = 'var(--color-main-text)';
+		probe.style.position = 'absolute';
+		probe.style.left = '-9999px';
+		document.body.appendChild(probe);
+		const primaryProbe = document.createElement('span');
+		primaryProbe.style.color = 'var(--color-primary-element)';
+		primaryProbe.style.position = 'absolute';
+		primaryProbe.style.left = '-9999px';
+		document.body.appendChild(primaryProbe);
+		const badgeColor = getComputedStyle(badge).color;
+		const mainText = getComputedStyle(probe).color;
+		const primary = getComputedStyle(primaryProbe).color;
+		probe.remove();
+		primaryProbe.remove();
+		return { skip: false, badgeColor, mainText, primary };
+	});
+	if (result.skip) {
+		return;
+	}
+	expect(result.badgeColor, 'private badge color').toEqual(result.mainText);
+	expect(result.badgeColor, 'private badge must not use primary ink').not.toEqual(result.primary);
+}
+
+/**
+ * Keyboard focus ring must be visible on primary chrome.
+ * @param {import('@playwright/test').Page} page
+ */
+async function assertFocusRingOnPrimary(page) {
+	const btn = page.locator('#app-content.ekc-app .ekc-btn--primary, #app-content.ekc-app button.primary, #ekc-reload, #ekc-refresh').first();
+	if (await btn.count() === 0) {
+		return;
+	}
+	await btn.evaluate((el) => el.focus({ focusVisible: true }));
+	const outline = await btn.evaluate((el) => {
+		const cs = getComputedStyle(el);
+		return {
+			outlineWidth: cs.outlineWidth,
+			outlineStyle: cs.outlineStyle,
+			outlineColor: cs.outlineColor,
+			boxShadow: cs.boxShadow,
+		};
+	});
+	const hasRing = (parseFloat(outline.outlineWidth) >= 2 && outline.outlineStyle !== 'none')
+		|| (outline.boxShadow && outline.boxShadow !== 'none' && !outline.boxShadow.startsWith('none'));
+	expect(hasRing, `focus ring missing: ${JSON.stringify(outline)}`).toBeTruthy();
 }
 
 /**
@@ -297,7 +355,9 @@ test.describe('EinkaufCheck theme × viewport a11y matrix', () => {
 				await assertThemeTokensResolved(page);
 				await assertNoHardcodedShellColors(page);
 				await assertOfferSurfacesThemeAware(page, theme);
+				await assertPrivateBadgeThemeSafe(page);
 				await assertChromeTouchTargets(page);
+				await assertFocusRingOnPrimary(page);
 				await expectNoHorizontalOverflow(page, `${theme}/${route.id}@1280`);
 
 				for (const vp of axeViewports) {

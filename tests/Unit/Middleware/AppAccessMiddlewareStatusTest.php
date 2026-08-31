@@ -16,6 +16,7 @@ use OCA\EinkaufCheck\Service\SettingsService;
 use OCA\EinkaufCheck\Service\ShoppingListService;
 use OCA\EinkaufCheck\Service\WatchService;
 use OCA\EinkaufCheck\Service\WeekCompareService;
+use OCA\EinkaufCheck\Service\WorkspaceService;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IL10N;
@@ -100,6 +101,27 @@ class AppAccessMiddlewareStatusTest extends TestCase {
 		$session = $this->createMock(IUserSession::class);
 		$session->method('getUser')->willReturn($user);
 
+		$workspaces = $this->createMock(WorkspaceService::class);
+		$ws = [
+			'id' => 1,
+			'plz' => '24149',
+			'week' => 'current',
+			'showImages' => false,
+			'role' => AccessControlService::ROLE_MANAGER,
+			'capabilities' => [
+				'canEditList' => true,
+				'canManageSettings' => true,
+			],
+		];
+		$workspaces->method('ensurePersonalWorkspace')->willReturn($ws);
+		$workspaces->method('getForUser')->willReturn($ws);
+		$workspaces->method('listForUser')->willReturn([$ws]);
+		$workspaces->method('getPrefs')->willReturn([
+			'plz' => '24149',
+			'week' => 'current',
+			'show_images' => false,
+		]);
+
 		return new ApiController(
 			$this->createMock(IRequest::class),
 			$this->createMock(OfferFetchService::class),
@@ -112,6 +134,7 @@ class AppAccessMiddlewareStatusTest extends TestCase {
 			$this->createMock(DirectorySearchService::class),
 			$this->createMock(PriceHistoryService::class),
 			$this->createMock(WeekCompareService::class),
+			$workspaces,
 		);
 	}
 }

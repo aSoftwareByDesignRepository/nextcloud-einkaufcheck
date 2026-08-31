@@ -44,5 +44,18 @@ return [
 		['name' => 'api#watchAdd', 'url' => '/api/watch', 'verb' => 'POST'],
 		['name' => 'api#watchUpdate', 'url' => '/api/watch/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
 		['name' => 'api#watchDelete', 'url' => '/api/watch/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
+
+		['name' => 'api#workspacesList', 'url' => '/api/workspaces', 'verb' => 'GET'],
+		['name' => 'api#workspacesCreate', 'url' => '/api/workspaces', 'verb' => 'POST'],
+		['name' => 'api#workspaceGet', 'url' => '/api/workspaces/{id}', 'verb' => 'GET', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#workspaceUpdate', 'url' => '/api/workspaces/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#workspaceDelete', 'url' => '/api/workspaces/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#workspaceMembers', 'url' => '/api/workspaces/{id}/members', 'verb' => 'GET', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#workspaceAddMember', 'url' => '/api/workspaces/{id}/members', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#memberUpdate', 'url' => '/api/workspace-members/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#memberDelete', 'url' => '/api/workspace-members/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#workspaceAddGroupMember', 'url' => '/api/workspaces/{id}/group-members', 'verb' => 'POST', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#groupMemberUpdate', 'url' => '/api/workspace-group-members/{id}', 'verb' => 'PUT', 'requirements' => ['id' => '\\d+']],
+		['name' => 'api#groupMemberDelete', 'url' => '/api/workspace-group-members/{id}', 'verb' => 'DELETE', 'requirements' => ['id' => '\\d+']],
 	],
 ];
