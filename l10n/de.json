@@ -360,7 +360,21 @@
 		"Shopping space deleted.": "Einkaufsbereich gelöscht.",
 		"Could not delete.": "Löschen fehlgeschlagen.",
 		"Only managers can change the postcode. Refresh still updates this space’s saved offers.": "Nur Manager können die Postleitzahl ändern. Aktualisieren lädt weiterhin die gespeicherten Angebote dieses Bereichs.",
-		"Search and filter this space’s offers. Only managers can change the postcode or week.": "Suche und filtere die Angebote dieses Bereichs. Nur Manager können Postleitzahl oder Woche ändern."
+		"Search and filter this space’s offers. Only managers can change the postcode or week.": "Suche und filtere die Angebote dieses Bereichs. Nur Manager können Postleitzahl oder Woche ändern.",
+		"Screen layout": "Seitenlayout",
+		"Hide the shopping list to see the full price table. Your list stays saved.": "Einkaufszettel ausblenden, um die volle Preistabelle zu sehen. Dein Zettel bleibt gespeichert.",
+		"Hide the shopping list and staples panel to see the full price table. Your data stays saved.": "Einkaufszettel und Vorräte ausblenden, um die volle Preistabelle zu sehen. Deine Daten bleiben gespeichert.",
+		"Compare prices (wide)": "Preise vergleichen (breit)",
+		"Show shopping list": "Einkaufszettel anzeigen",
+		"Show lists": "Listen anzeigen",
+		"Hide list": "Zettel ausblenden",
+		"Hide list to compare prices": "Zettel ausblenden zum Preisvergleich",
+		"Hide lists to compare prices": "Listen ausblenden zum Preisvergleich",
+		"Shopping list and staples": "Einkaufszettel und Vorräte",
+		"Shopping list hidden. Tap Shopping list at the bottom to open it.": "Einkaufszettel ausgeblendet. Unten auf Einkaufszettel tippen, um ihn zu öffnen.",
+		"Shopping list shown beside prices.": "Einkaufszettel wird neben den Preisen angezeigt.",
+		"Shopping list and staples hidden. Tap Show lists or the button at the bottom to open them.": "Einkaufszettel und Vorräte ausgeblendet. Auf Listen anzeigen oder den Button unten tippen, um sie zu öffnen.",
+		"Shopping list and staples shown beside prices.": "Einkaufszettel und Vorräte werden neben den Preisen angezeigt."
 	},
 	"pluralForm": "nplurals=2; plural=(n != 1);"
 }

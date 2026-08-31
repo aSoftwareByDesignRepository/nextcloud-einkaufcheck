@@ -10,6 +10,53 @@
 	}
 
 	const APP = 'einkaufcheck';
+
+	/**
+	 * @param {string} text
+	 * @param {string|number|boolean|Array<string|number|boolean|null|undefined>|Record<string, string|number|boolean|null|undefined>|null|undefined} args
+	 * @returns {string}
+	 */
+	function applyPlaceholders(text, args) {
+		if (args === undefined || args === null || typeof text !== 'string') {
+			return text;
+		}
+		if (typeof args === 'object' && !Array.isArray(args)) {
+			return text.replace(/\{([a-zA-Z0-9_]+)\}/g, function (match, name) {
+				if (!Object.prototype.hasOwnProperty.call(args, name) || args[name] === undefined || args[name] === null) {
+					return match;
+				}
+				return String(args[name]);
+			});
+		}
+		const list = Array.isArray(args) ? args : [args];
+		let i = 0;
+		return text.replace(/%%|%\.\d+f|%s|%d/g, function (token) {
+			if (token === '%%') {
+				return '%';
+			}
+			if (i >= list.length) {
+				return token;
+			}
+			const value = list[i++];
+			if (value === undefined || value === null) {
+				return '';
+			}
+			if (token === '%d') {
+				return String(parseInt(String(value), 10) || 0);
+			}
+			return String(value);
+		});
+	}
+
+	/** Translate with guaranteed %s / {name} substitution (NC core leaves %s literal). */
+	function ekcTranslate(msg, args) {
+		let text = typeof window.t === 'function' ? window.t(APP, msg) : String(msg);
+		if (args != null) {
+			text = applyPlaceholders(text, args);
+		}
+		return text;
+	}
+
 	const api = window.EinkaufCheckApi;
 	const msg = window.EinkaufCheckMessaging;
 	const urls = JSON.parse(root.dataset.ekcUrls || '{}');
@@ -21,6 +68,49 @@
 	if (api && bootWorkspaceId > 0 && typeof api.setWorkspaceId === 'function') {
 		api.setWorkspaceId(bootWorkspaceId);
 	}
+
+	function layoutModeStorageKeyEarly() {
+		return 'ekc:layout:' + (bootWorkspaceId > 0 ? bootWorkspaceId : '0');
+	}
+
+	function readLayoutModeEarly() {
+		try {
+			const v = window.localStorage.getItem(layoutModeStorageKeyEarly());
+			if (v === 'split' || v === 'compare') {
+				return v;
+			}
+		} catch (_) {
+			/* private mode */
+		}
+		return 'compare';
+	}
+
+	/** Apply compare-focus before paint when list should be hidden (prevents FOUC + broken grid). */
+	function applyLayoutModeEarly() {
+		if (page !== 'offers' || readLayoutModeEarly() !== 'compare') {
+			return;
+		}
+		root.classList.add('ekc-app--compare-focus');
+		const grid = document.getElementById('ekc-page-grid');
+		if (grid) {
+			grid.classList.add('ekc-page-grid--compare-focus');
+		}
+		const listCard = document.getElementById('ekc-list-card');
+		if (listCard) {
+			listCard.hidden = true;
+			if ('inert' in listCard) {
+				listCard.inert = true;
+			}
+		}
+		const side = document.getElementById('ekc-side');
+		if (side) {
+			side.hidden = true;
+			if ('inert' in side) {
+				side.inert = true;
+			}
+		}
+	}
+	applyLayoutModeEarly();
 
 	const state = {
 		offers: [],
@@ -475,7 +565,7 @@
 		}
 		const countEl = $('ekc-offers-count');
 		if (countEl) {
-			countEl.textContent = t(APP, '%s offers shown.', [String(rows.length)]);
+			countEl.textContent = ekcTranslate('%s offers shown.', [String(rows.length)]);
 		}
 		const unitHeader = t(APP, 'Unit price');
 		for (const o of rows) {
@@ -540,6 +630,151 @@
 	const addBusy = new Set();
 	let listClearBusy = false;
 	let listJumpObserver = null;
+	let layoutMode = 'compare';
+
+	function currentWorkspaceId() {
+		if (api && typeof api.getWorkspaceId === 'function') {
+			return api.getWorkspaceId();
+		}
+		return bootWorkspaceId;
+	}
+
+	function layoutModeStorageKey() {
+		const id = currentWorkspaceId();
+		return 'ekc:layout:' + (id > 0 ? id : '0');
+	}
+
+	function readLayoutMode() {
+		try {
+			const v = window.localStorage.getItem(layoutModeStorageKey());
+			if (v === 'split' || v === 'compare') {
+				return v;
+			}
+		} catch (_) {
+			/* private mode / disabled storage */
+		}
+		return 'compare';
+	}
+
+	function persistLayoutMode(mode) {
+		try {
+			window.localStorage.setItem(layoutModeStorageKey(), mode);
+		} catch (_) {
+			/* private mode */
+		}
+	}
+
+	function syncLayoutToggleButtons() {
+		const compare = layoutMode === 'compare';
+		$('ekc-layout-compare')?.setAttribute('aria-pressed', compare ? 'true' : 'false');
+		$('ekc-layout-split')?.setAttribute('aria-pressed', compare ? 'false' : 'true');
+	}
+
+	function openCompareSectionIfReady() {
+		const wrap = $('ekc-compares-wrap');
+		if (wrap && !wrap.hidden) {
+			wrap.open = true;
+		}
+	}
+
+	function applyLayoutMode(mode, options = {}) {
+		const compare = mode === 'compare';
+		layoutMode = compare ? 'compare' : 'split';
+		root.classList.toggle('ekc-app--compare-focus', compare);
+		const grid = $('ekc-page-grid');
+		if (grid) {
+			grid.classList.toggle('ekc-page-grid--compare-focus', compare);
+		}
+		const side = $('ekc-side');
+		const listCard = $('ekc-list-card');
+		const focusTarget = $('ekc-layout-compare');
+		if (side) {
+			if (compare) {
+				const active = document.activeElement;
+				if (active && side.contains(active)) {
+					focusTarget?.focus();
+				}
+				side.hidden = true;
+				if ('inert' in side) {
+					side.inert = true;
+				}
+			} else {
+				side.hidden = false;
+				if ('inert' in side) {
+					side.inert = false;
+				}
+			}
+		}
+		if (listCard) {
+			listCard.hidden = compare;
+			if ('inert' in listCard) {
+				listCard.inert = compare;
+			}
+		}
+		syncLayoutToggleButtons();
+		if (compare) {
+			openCompareSectionIfReady();
+		}
+		updateListJumpForLayout();
+		if (!options.skipPersist) {
+			persistLayoutMode(layoutMode);
+		}
+	}
+
+	function updateListJumpForLayout() {
+		const jump = $('ekc-list-jump');
+		if (!jump) {
+			return;
+		}
+		if (layoutMode === 'compare') {
+			if (listJumpObserver) {
+				listJumpObserver.disconnect();
+				listJumpObserver = null;
+			}
+			jump.hidden = state.list.length === 0;
+		} else {
+			setupListJumpObserver();
+		}
+	}
+
+	function bindLayoutToggle() {
+		bindLayoutHideList();
+		const toolbar = $('ekc-layout-toggle');
+		if (!toolbar || toolbar.dataset.ekcLayoutWired === '1') {
+			return;
+		}
+		toolbar.dataset.ekcLayoutWired = '1';
+		$('ekc-layout-compare')?.addEventListener('click', () => {
+			const wasSplit = layoutMode !== 'compare';
+			applyLayoutMode('compare');
+			if (wasSplit) {
+				msg.announce(ekcTranslate('Shopping list and staples hidden. Tap Show lists or the button at the bottom to open them.'), 'polite');
+			}
+		});
+		$('ekc-layout-split')?.addEventListener('click', () => {
+			const wasCompare = layoutMode !== 'split';
+			applyLayoutMode('split');
+			if (wasCompare) {
+				msg.announce(ekcTranslate('Shopping list and staples shown beside prices.'), 'polite');
+			}
+		});
+	}
+
+	function bindLayoutHideList() {
+		const btn = $('ekc-layout-hide-from-side');
+		if (!btn || btn.dataset.ekcLayoutHideWired === '1') {
+			return;
+		}
+		btn.dataset.ekcLayoutHideWired = '1';
+		btn.addEventListener('click', () => {
+			const wasSplit = layoutMode !== 'compare';
+			applyLayoutMode('compare');
+			$('ekc-layout-compare')?.focus();
+			if (wasSplit) {
+				msg.announce(ekcTranslate('Shopping list and staples hidden. Tap Show lists or the button at the bottom to open them.'), 'polite');
+			}
+		});
+	}
 
 	function selectedListStore() {
 		const el = document.querySelector('input[name="ekc-list-store"]:checked');
@@ -627,22 +862,47 @@
 		jump.setAttribute('aria-label', n
 			? t(APP, 'Jump to shopping list, %s items', [String(n)])
 			: t(APP, 'Jump to shopping list'));
+		if (layoutMode === 'compare') {
+			jump.hidden = n === 0;
+		}
 	}
 
-	function bindListJump() {
+	function bindListJumpClick() {
 		const jump = $('ekc-list-jump');
 		const card = $('ekc-list-card');
-		if (!jump || !card) {
+		if (!jump || !card || jump.dataset.ekcListJumpWired === '1') {
 			return;
 		}
+		jump.dataset.ekcListJumpWired = '1';
 		jump.addEventListener('click', (e) => {
 			e.preventDefault();
-			card.focus({ preventScroll: true });
-			card.scrollIntoView({
-				block: 'start',
-				behavior: (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth',
-			});
+			const revealList = () => {
+				const cardEl = $('ekc-list-card');
+				if (!cardEl) {
+					return;
+				}
+				cardEl.focus({ preventScroll: true });
+				cardEl.scrollIntoView({
+					block: 'start',
+					behavior: (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth',
+				});
+			};
+			if (layoutMode === 'compare') {
+				applyLayoutMode('split');
+				msg.announce(ekcTranslate('Shopping list and staples shown beside prices.'), 'polite');
+				window.requestAnimationFrame(revealList);
+				return;
+			}
+			revealList();
 		});
+	}
+
+	function setupListJumpObserver() {
+		const jump = $('ekc-list-jump');
+		const card = $('ekc-list-card');
+		if (!jump || !card || layoutMode === 'compare') {
+			return;
+		}
 		if (typeof IntersectionObserver !== 'function') {
 			return;
 		}
@@ -654,6 +914,11 @@
 			jump.hidden = entries.some((entry) => entry.isIntersecting);
 		}, { root: scroller || null, threshold: 0.12 });
 		listJumpObserver.observe(card);
+	}
+
+	function bindListJump() {
+		bindListJumpClick();
+		setupListJumpObserver();
 	}
 
 	function renderList() {
@@ -1017,12 +1282,15 @@
 				const unit = c.per_kg != null ? euro(c.per_kg) + '/kg' : (c.per_l != null ? euro(c.per_l) + '/l' : '—');
 				return `<tr class="${c.cheapest ? 'overlap' : ''}"><td data-cell="${esc(t(APP, 'Store'))}">${esc(c.store)}</td><td data-cell="${esc(t(APP, 'Brand'))}">${esc(c.brand)}</td><td data-cell="${esc(t(APP, 'Product'))}">${esc(c.name)}</td><td data-cell="${esc(t(APP, 'Pack'))}">${esc(c.pack)}</td><td class="num" data-cell="${esc(t(APP, 'Price'))}">${esc(euro(c.price))}</td><td class="num" data-cell="${esc(t(APP, 'Unit price'))}">${esc(unit)}</td><td data-cell="${esc(t(APP, 'Cheapest'))}">${c.cheapest ? '<span class="ekc-pill win">' + esc(t(APP, 'cheaper')) + '</span>' : ''}</td></tr>`;
 			}).join('');
-			cards.push(`<div class="ekc-compare-card"><h3>${esc(o.name)}</h3><table class="table"><thead><tr><th scope="col">${esc(t(APP, 'Store'))}</th><th scope="col">${esc(t(APP, 'Brand'))}</th><th scope="col">${esc(t(APP, 'Product'))}</th><th scope="col">${esc(t(APP, 'Pack'))}</th><th scope="col" class="num">${esc(t(APP, 'Price'))}</th><th scope="col" class="num">${esc(t(APP, 'Unit price'))}</th><th scope="col" class="ekc-sr-only">${esc(t(APP, 'Cheapest'))}</th></tr></thead><tbody>${rows}</tbody></table></div>`);
+			cards.push(`<div class="ekc-compare-card"><h3>${esc(o.name)}</h3><div class="ekc-table-wrap ekc-compare-table-wrap" tabindex="0" role="region" aria-label="${esc(o.name)}"><table class="table"><thead><tr><th scope="col">${esc(t(APP, 'Store'))}</th><th scope="col">${esc(t(APP, 'Brand'))}</th><th scope="col">${esc(t(APP, 'Product'))}</th><th scope="col">${esc(t(APP, 'Pack'))}</th><th scope="col" class="num">${esc(t(APP, 'Price'))}</th><th scope="col" class="num">${esc(t(APP, 'Unit price'))}</th><th scope="col" class="ekc-sr-only">${esc(t(APP, 'Cheapest'))}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`);
 		}
 		box.innerHTML = cards.length
 			? '<p class="ekc-hint">' + esc(t(APP, 'Same item in more than one store — cheapest by €/kg, then €/l, then pack price.')) + '</p>' + cards.join('')
 			: '';
 		wrap.hidden = cards.length === 0;
+		if (layoutMode === 'compare' && cards.length) {
+			wrap.open = true;
+		}
 	}
 
 	async function loadUserPrefs() {
@@ -1043,6 +1311,8 @@
 	}
 
 	function bindOffersPage() {
+		applyLayoutMode(readLayoutMode(), { skipPersist: true });
+		bindLayoutToggle();
 		$('ekc-filter-form').addEventListener('submit', async (e) => {
 			e.preventDefault();
 			if (!markPlzValidity()) {

@@ -273,5 +273,19 @@
     "Product pictures": "Product pictures",
     "Only an EinkaufCheck administrator may do that.": "Only an EinkaufCheck administrator may do that.",
     "Only managers can change the postcode. Refresh still updates this space’s saved offers.": "Only managers can change the postcode. Refresh still updates this space’s saved offers.",
-    "Search and filter this space’s offers. Only managers can change the postcode or week.": "Search and filter this space’s offers. Only managers can change the postcode or week."
+    "Search and filter this space’s offers. Only managers can change the postcode or week.": "Search and filter this space’s offers. Only managers can change the postcode or week.",
+    "Screen layout": "Screen layout",
+    "Hide the shopping list to see the full price table. Your list stays saved.": "Hide the shopping list to see the full price table. Your list stays saved.",
+    "Hide the shopping list and staples panel to see the full price table. Your data stays saved.": "Hide the shopping list and staples panel to see the full price table. Your data stays saved.",
+    "Compare prices (wide)": "Compare prices (wide)",
+    "Show shopping list": "Show shopping list",
+    "Show lists": "Show lists",
+    "Hide list": "Hide list",
+    "Hide list to compare prices": "Hide list to compare prices",
+    "Hide lists to compare prices": "Hide lists to compare prices",
+    "Shopping list and staples": "Shopping list and staples",
+    "Shopping list hidden. Tap Shopping list at the bottom to open it.": "Shopping list hidden. Tap Shopping list at the bottom to open it.",
+    "Shopping list shown beside prices.": "Shopping list shown beside prices.",
+    "Shopping list and staples hidden. Tap Show lists or the button at the bottom to open them.": "Shopping list and staples hidden. Tap Show lists or the button at the bottom to open them.",
+    "Shopping list and staples shown beside prices.": "Shopping list and staples shown beside prices."
 }, "pluralForm" : "nplurals=2; plural=(n != 1);" }

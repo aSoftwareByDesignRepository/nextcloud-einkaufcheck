@@ -1,17 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  SPDX-FileCopyrightText: 2026 Alexander Maeule <info@software-by-design.de>
+  SPDX-FileCopyrightText: 2026 Alexander Mäule <info@software-by-design.de>
   SPDX-License-Identifier: AGPL-3.0-or-later
-  Cache-bust stamp: 1.5.5-icon2
+  Cache-bust stamp: 1.6.3-icon-cart
 
   EinkaufCheck white glyph for Nextcloud header / app menu / navigation entry.
-  Motif: shopping bag (weekly offers + list). White strokes only so
+  Motif: shopping cart (offers + list). White strokes only so
   Nextcloud background-image-invert-if-bright keeps the glyph visible.
-  XML comments must not contain consecutive hyphen pairs (breaks strict SVG parsers).
+  Geometry matches IconCatalog shopping-cart for in-app brand parity.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-	<path d="M6 8h12l-1.2 12.5a1.5 1.5 0 0 1-1.5 1.5H8.7a1.5 1.5 0 0 1-1.5-1.5L6 8z"/>
-	<path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>
-	<path d="M9 11v4"/>
-	<path d="M15 11v4"/>
+	<circle cx="8" cy="21" r="1"/>
+	<circle cx="19" cy="21" r="1"/>
+	<path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>
 </svg>

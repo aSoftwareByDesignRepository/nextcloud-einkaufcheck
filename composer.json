@@ -5,6 +5,10 @@
 	"require": {
 		"php": "^8.2"
 	},
+	"require-dev": {
+		"nextcloud/ocp": "^32.0 || ^33.0",
+		"phpunit/phpunit": "^9.6"
+	},
 	"autoload": {
 		"psr-4": {
 			"OCA\\EinkaufCheck\\": "lib/"
@@ -12,7 +16,20 @@
 	},
 	"autoload-dev": {
 		"psr-4": {
-			"OCA\\EinkaufCheck\\Tests\\": "tests/"
+			"OCA\\EinkaufCheck\\Tests\\": "tests/",
+			"OCP\\": "vendor/nextcloud/ocp/OCP/",
+			"NCU\\": "vendor/nextcloud/ocp/NCU/"
 		}
+	},
+	"scripts": {
+		"test": "phpunit --testsuite unit",
+		"test:unit": "phpunit --testsuite unit",
+		"test:integration": "phpunit --testsuite integration",
+		"test:all": "phpunit",
+		"test:mutation": "php tests/Mutation/run-critical-mutations.php"
+	},
+	"config": {
+		"optimize-autoloader": true,
+		"sort-packages": true
 	}
 }

@@ -50,7 +50,16 @@ class CompareTableScopeTest extends TestCase {
 		self::assertStringContainsString('id="ekc-list-store-aldi"', $main);
 		self::assertStringContainsString('Which shop?', $main);
 		self::assertStringContainsString('id="ekc-list-jump"', $main);
+		self::assertStringContainsString('id="ekc-layout-toggle"', $main);
+		self::assertStringContainsString('id="ekc-layout-compare"', $main);
+		self::assertStringContainsString('id="ekc-page-grid"', $main);
+		self::assertStringContainsString('id="ekc-side"', $main);
+		self::assertStringContainsString('aria-pressed', $main);
 		$js = (string)file_get_contents(dirname(__DIR__, 3) . '/js/app.js');
+		self::assertStringContainsString('applyLayoutMode', $js);
+		self::assertStringContainsString('ekc:layout:', $js);
+		self::assertStringNotContainsString('side.hidden = compare', $js);
+		self::assertStringContainsString('ekc-app--compare-focus', $js);
 		self::assertStringContainsString('listExportUrl', $js);
 		self::assertStringContainsString('listClearUrl', $js);
 		self::assertStringContainsString('visibleListItems', $js);
@@ -124,7 +133,7 @@ class CompareTableScopeTest extends TestCase {
 	public function testQtyStepperAndWatchPauseArePresent(): void {
 		$js = (string)file_get_contents(dirname(__DIR__, 3) . '/js/app.js');
 		self::assertStringContainsString('ekc-qty__btn', $js);
-		self::assertStringContainsString("t(APP, '%s offers shown.'", $js);
+		self::assertStringContainsString('ekcTranslate(\'%s offers shown.\'', $js);
 		self::assertStringContainsString('Stop watching this staple?', $js);
 		self::assertStringContainsString("listBusy.has(item.id)", $js);
 		self::assertStringContainsString('whatsapp_url', $js);

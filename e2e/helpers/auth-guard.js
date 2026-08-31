@@ -139,6 +139,19 @@ async function waitForOffersSettled(page) {
 	}
 }
 
+/**
+ * Default layout hides the shopping list for wide compare — reveal before list UI tests.
+ * @param {import('@playwright/test').Page} page
+ */
+async function ensureListPanelVisible(page) {
+	const side = page.locator('#ekc-side');
+	if (await side.isVisible()) {
+		return;
+	}
+	await page.locator('#ekc-layout-split').click();
+	await side.waitFor({ state: 'visible', timeout: 5_000 });
+}
+
 module.exports = {
 	ensureAuthenticated,
 	tryProgrammaticLogin,
@@ -146,4 +159,5 @@ module.exports = {
 	dismissOpenAppNavigation,
 	attachPageErrorCollector,
 	waitForOffersSettled,
+	ensureListPanelVisible,
 };

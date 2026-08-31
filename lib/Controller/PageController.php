@@ -232,12 +232,14 @@ class PageController extends Controller {
 		if ($pageId === 'settings' && $settingsSection === 'stores') {
 			$params['storesStatus'] = $this->offers->storesStatus();
 		}
+		$params['cspNonce'] = \OCP\Server::get(\OC\Security\CSP\ContentSecurityPolicyNonceManager::class)->getNonce();
 		return new TemplateResponse(Application::APP_ID, $template, $params);
 	}
 
 	private function registerAssets(string $pageId, string $settingsSection): void {
 		Util::addTranslations(Application::APP_ID);
 		Util::addStyle(Application::APP_ID, 'app');
+		Util::addScript(Application::APP_ID, 'common/l10n');
 		Util::addScript(Application::APP_ID, 'common/api');
 		Util::addScript(Application::APP_ID, 'common/messaging');
 		Util::addScript(Application::APP_ID, 'common/workspace');

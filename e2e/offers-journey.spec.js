@@ -3,13 +3,14 @@
  * Offers happy path: load list, add one item, watch a staple. Granny can find + and Watch.
  */
 const { test, expect } = require('@playwright/test');
-const { gotoApp, waitForOffersSettled } = require('./helpers/auth-guard');
+const { gotoApp, waitForOffersSettled, ensureListPanelVisible } = require('./helpers/auth-guard');
 
 const BASE = (process.env.E2E_BASE || process.env.BASE_URL || 'http://localhost:8081').replace(/\/$/, '');
 const OFFERS = `${BASE}/index.php/apps/einkaufcheck/`;
 
 /** Shared ekctest user — leftover list rows from earlier runs must not fail exact counts. */
 async function emptyShoppingList(page) {
+	await ensureListPanelVisible(page);
 	await expect(page.locator('#ekc-list-count')).toHaveText(/^\(/);
 	if ((await page.locator('#ekc-list-items li').count()) > 0) {
 		page.once('dialog', (d) => d.accept());
@@ -94,6 +95,7 @@ test.describe('EinkaufCheck offers journey', () => {
 	test('shopping list can be filtered to one store', async ({ page }) => {
 		await gotoApp(page, OFFERS);
 		await waitForOffersSettled(page);
+		await ensureListPanelVisible(page);
 		await expect(page.locator('#ekc-list-store-all')).toBeVisible();
 		await expect(page.locator('#ekc-print')).toBeVisible();
 		await emptyShoppingList(page);
@@ -180,5 +182,43 @@ test.describe('EinkaufCheck offers journey', () => {
 		await expect(page.locator('#ekc-cat-nonfood')).toBeVisible();
 		await expect(page.locator('#ekc-cat-all')).toBeVisible();
 		await expect(page.locator('#ekc-cat-all')).toBeChecked();
+	});
+
+	test('hide list button widens offers table', async ({ page }) => {
+		await gotoApp(page, OFFERS);
+		await waitForOffersSettled(page);
+		await ensureListPanelVisible(page);
+		const wrapBefore = page.locator('#ekc-table-wrap');
+		const widthBefore = await wrapBefore.evaluate((el) => el.clientWidth);
+		expect(widthBefore).toBeGreaterThan(200);
+		await page.locator('#ekc-layout-hide-from-side').click();
+		await expect(page.locator('#ekc-list-card')).toBeHidden();
+		await expect(page.locator('#app-content.ekc-app')).toHaveClass(/ekc-app--compare-focus/);
+		await expect(page.locator('#ekc-offers-count')).not.toContainText('%s');
+		const widthAfter = await wrapBefore.evaluate((el) => el.clientWidth);
+		expect(widthAfter).toBeGreaterThan(widthBefore * 1.15);
+	});
+
+	test('compare layout hides both side panels for full-width table', async ({ page }) => {
+		await gotoApp(page, OFFERS);
+		await waitForOffersSettled(page);
+		await expect(page.locator('#ekc-layout-compare')).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.locator('#ekc-side')).toBeHidden();
+		await expect(page.locator('#ekc-list-card')).toBeHidden();
+		await expect(page.locator('#ekc-watch-card')).toBeHidden();
+		const tableBox = await page.locator('#ekc-offers-table').boundingBox();
+		expect(tableBox?.width ?? 0).toBeGreaterThan(400);
+		await page.locator('#ekc-layout-split').click();
+		await expect(page.locator('#ekc-layout-split')).toHaveAttribute('aria-pressed', 'true');
+		await expect(page.locator('#ekc-side')).toBeVisible();
+		await expect(page.locator('#ekc-list-card')).toBeVisible();
+		await expect(page.locator('#ekc-watch-card')).toBeVisible();
+		await page.locator('#ekc-layout-compare').click();
+		await expect(page.locator('#ekc-side')).toBeHidden();
+		const jump = page.locator('#ekc-list-jump');
+		if (await jump.isVisible()) {
+			await jump.click();
+			await expect(page.locator('#ekc-side')).toBeVisible();
+		}
 	});
 });

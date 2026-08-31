@@ -546,6 +546,113 @@
 .ekc-compares-wrap[hidden] { display: none !important; }
 .ekc-compares-wrap { margin-block: var(--ekc-space-3); }
 
+/* ── Layout toggle (compare focus vs split list column) ─────── */
+#app-content.ekc-app .ekc-layout-toggle {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-3);
+	padding: var(--ekc-space-4);
+	border: 1px solid var(--ekc-border);
+	border-radius: var(--ekc-radius-md);
+	background: var(--ekc-bg-soft, var(--color-background-hover));
+	border-inline-start: 4px solid var(--color-primary-element, #0082c9);
+}
+#app-content.ekc-app .ekc-layout-toggle__head {
+	display: flex;
+	flex-direction: column;
+	gap: var(--ekc-space-2);
+	min-width: 0;
+}
+#app-content.ekc-app .ekc-layout-toggle__title {
+	margin: 0;
+	font-size: var(--ekc-fs-lg);
+	font-weight: 700;
+	color: var(--ekc-text);
+}
+#app-content.ekc-app .ekc-layout-toggle__hint {
+	margin: 0;
+	font-size: var(--ekc-fs-sm);
+	color: var(--ekc-muted);
+	max-width: 52ch;
+}
+#app-content.ekc-app .ekc-layout-toggle__group {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0;
+	align-items: stretch;
+	border: 1px solid var(--ekc-border);
+	border-radius: var(--ekc-radius-md);
+	overflow: hidden;
+	background: var(--color-main-background, #fff);
+}
+#app-content.ekc-app .ekc-layout-toggle__btn {
+	flex: 1 1 12rem;
+	min-height: 44px;
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
+}
+#app-content.ekc-app .ekc-layout-toggle__btn + .ekc-layout-toggle__btn {
+	border-inline-start: 1px solid var(--ekc-border);
+}
+#app-content.ekc-app .ekc-layout-toggle__btn[aria-pressed="true"] {
+	background: var(--color-primary-element);
+	color: var(--color-primary-element-text);
+}
+#app-content.ekc-app .ekc-layout-toggle__btn:focus-visible {
+	outline: var(--ekc-focus, 3px) solid var(--color-primary-element);
+	outline-offset: -3px;
+	z-index: 1;
+}
+#app-content.ekc-app .ekc-card__header--split {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ekc-space-3);
+}
+#app-content.ekc-app .ekc-card__header-main {
+	flex: 1 1 12rem;
+	min-width: 0;
+}
+#app-content.ekc-app .ekc-layout-hide-list {
+	flex: 0 0 auto;
+	min-height: 44px;
+}
+#app-content.ekc-app.ekc-app--compare-focus .ekc-layout-hide-list {
+	display: none;
+}
+#app-content.ekc-app .ekc-page-grid--compare-focus,
+#app-content.ekc-app.ekc-app--compare-focus .ekc-page-grid {
+	grid-template-columns: 1fr !important;
+}
+@media (min-width: 769px) {
+	#app-content.ekc-app .ekc-page-grid--compare-focus,
+	#app-content.ekc-app.ekc-app--compare-focus .ekc-page-grid {
+		grid-template-columns: 1fr !important;
+	}
+}
+#app-content.ekc-app.ekc-app--compare-focus .ekc-side,
+#app-content.ekc-app .ekc-side[hidden] {
+	display: none !important;
+}
+#app-content.ekc-app.ekc-app--compare-focus .ekc-list-card {
+	display: none !important;
+}
+#app-content.ekc-app .ekc-list-card[hidden] {
+	display: none !important;
+}
+#content.app-einkaufcheck #app-content.ekc-app--compare-focus .ekc-card--table-solo > .ekc-table-wrap {
+	max-height: min(56rem, calc(100dvh - 11rem));
+}
+#app-content.ekc-app.ekc-app--compare-focus .ekc-list-jump {
+	display: inline-flex !important;
+}
+#app-content.ekc-app .ekc-compare-table-wrap {
+	margin-top: var(--ekc-space-2);
+	max-width: 100%;
+}
+
 /* ── Table ───────────────────────────────────────────────────── */
 .ekc-card--table-solo {
 	min-width: 0;
@@ -591,9 +698,13 @@
 
 /* ── Side lists ──────────────────────────────────────────────── */
 .ekc-side { display: grid; gap: var(--ekc-space-5); min-width: 0; }
+#app-content.ekc-app .ekc-list-card[hidden] { display: none !important; }
 /* 769px = NC tablet+: sticky shopping-list column beside offers (page-grid columns from page-patterns). */
 @media (min-width: 769px) {
-	.ekc-side { position: sticky; top: var(--ekc-space-3); }
+	#app-content.ekc-app:not(.ekc-app--compare-focus) .ekc-side {
+		position: sticky;
+		top: var(--ekc-space-3);
+	}
 }
 .ekc-list-actions { display: flex; flex-direction: column; align-items: stretch; gap: var(--ekc-space-3); margin: 0; }
 .ekc-list-actions__share { display: flex; flex-wrap: wrap; gap: var(--ekc-space-2); }
@@ -1205,6 +1316,7 @@
 	.ekc-page-header,
 	.ekc-filter-panel,
 	.ekc-quick-filter-dock,
+	.ekc-layout-toggle,
 	.ekc-stat-strip,
 	.ekc-card--table-solo,
 	.ekc-watch-card,

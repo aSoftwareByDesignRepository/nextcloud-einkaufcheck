@@ -110,7 +110,24 @@ require __DIR__ . '/common/page-start.php';
 	<section class="ekc-compares" id="ekc-compares"></section>
 </details>
 
-<div class="ekc-page-grid">
+<section class="ekc-layout-toggle" id="ekc-layout-toggle" aria-labelledby="ekc-layout-toggle-label">
+	<div class="ekc-layout-toggle__head">
+		<h2 class="ekc-layout-toggle__title" id="ekc-layout-toggle-label"><?php p($l->t('Screen layout')); ?></h2>
+		<p class="ekc-layout-toggle__hint"><?php p($l->t('Hide the shopping list and staples panel to see the full price table. Your data stays saved.')); ?></p>
+	</div>
+	<div class="ekc-layout-toggle__group" role="toolbar" aria-labelledby="ekc-layout-toggle-label">
+		<button type="button" class="ekc-btn ekc-btn--secondary ekc-layout-toggle__btn" id="ekc-layout-compare" data-ekc-layout="compare" aria-pressed="true" aria-controls="ekc-side">
+			<?php p($l->t('Compare prices (wide)')); ?>
+		</button>
+		<button type="button" class="ekc-btn ekc-btn--secondary ekc-layout-toggle__btn" id="ekc-layout-split" data-ekc-layout="split" aria-pressed="false" aria-controls="ekc-side">
+			<?php p($l->t('Show lists')); ?>
+		</button>
+	</div>
+</section>
+
+<?php require __DIR__ . '/common/layout-bootstrap.php'; ?>
+
+<div class="ekc-page-grid" id="ekc-page-grid">
 	<section class="ekc-card ekc-card--table-solo" aria-labelledby="ekc-offers-title">
 		<header class="ekc-card__header">
 			<h2 id="ekc-offers-title"><?php p($l->t('This week’s offers')); ?></h2>
@@ -147,11 +164,16 @@ require __DIR__ . '/common/page-start.php';
 		</div>
 	</section>
 
-	<aside class="ekc-side">
+	<aside class="ekc-side" id="ekc-side" aria-label="<?php p($l->t('Shopping list and staples')); ?>">
 		<section class="ekc-card ekc-list-card" id="ekc-list-card" aria-labelledby="ekc-list-title" tabindex="-1">
-			<header class="ekc-card__header">
-				<h2 class="ekc-card__title" id="ekc-list-title"><?php p($l->t('Shopping list')); ?> <span id="ekc-list-count"></span></h2>
-				<p class="ekc-list-print-store" id="ekc-list-print-store" aria-hidden="true"></p>
+			<header class="ekc-card__header ekc-card__header--split">
+				<div class="ekc-card__header-main">
+					<h2 class="ekc-card__title" id="ekc-list-title"><?php p($l->t('Shopping list')); ?> <span id="ekc-list-count"></span></h2>
+					<p class="ekc-list-print-store" id="ekc-list-print-store" aria-hidden="true"></p>
+				</div>
+				<button type="button" class="ekc-btn ekc-btn--ghost ekc-layout-hide-list" id="ekc-layout-hide-from-side" aria-label="<?php p($l->t('Hide lists to compare prices')); ?>">
+					<?php p($l->t('Hide list')); ?>
+				</button>
 			</header>
 			<div class="ekc-card__body">
 				<fieldset class="ekc-list-store-filter">
@@ -179,7 +201,7 @@ require __DIR__ . '/common/page-start.php';
 			</div>
 		</section>
 
-		<section class="ekc-card ekc-watch-card" aria-labelledby="ekc-watch-title">
+		<section class="ekc-card ekc-watch-card" id="ekc-watch-card" aria-labelledby="ekc-watch-title">
 			<header class="ekc-card__header">
 				<h2 id="ekc-watch-title"><?php p($l->t('Staples to watch')); ?></h2>
 			</header>
